@@ -1,6 +1,12 @@
 import conllu
-
+import torch
+import torch.nn as nn
+from collections import Counter
+import torch.nn.functional as F
+import torch.optim as optim
+from tqdm import tqdm
 from torch.utils.data import Dataset
+from projectivize import filename_projectivize
 
 
 class Treebank(Dataset):
@@ -22,9 +28,6 @@ class Treebank(Dataset):
         return self.items[idx]
 
 
-TRAIN_DATA = Treebank("en_ewt-ud-train-projectivized.conllu")
-DEV_DATA = Treebank("en_ewt-ud-dev.conllu")
-
 PAD = "[PAD]"
 UNK = "[UNK]"
 
@@ -42,10 +45,6 @@ def make_vocabs(gold_data):
             if tag not in vocab_tags:
                 vocab_tags[tag] = len(vocab_tags)
     return vocab_words, vocab_tags
-
-
-import torch
-import torch.nn as nn
 
 
 class FixedWindowModel(nn.Module):
@@ -113,10 +112,7 @@ class FixedWindowTagger(Tagger):
         return [self.i2t[i] for i in pred_tags]
 
 
-from collections import Counter
-
-
-def training_examples(
+def training_examples_tagger(
     vocab_words, vocab_tags, gold_data, tagger, batch_size=100, shuffle=False
 ):
     bx = []
@@ -157,12 +153,6 @@ def training_examples(
             yield bx, by
 
 
-import torch.nn.functional as F
-import torch.optim as optim
-
-from tqdm import tqdm
-
-
 def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
@@ -178,7 +168,7 @@ def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(len(s) for s in train_data)) as pbar:
-            for bx, by in training_examples(
+            for bx, by in training_examples_tagger(
                 vocab_words, vocab_tags, train_data, tagger
             ):
                 optimizer.zero_grad()
@@ -206,10 +196,6 @@ def accuracy(tagger, gold_data):
             correct += int(gold_tag == pred_tag)
             total += 1
     return correct / total
-
-
-TAGGER = train_tagger(TRAIN_DATA)
-print("{:.4f}".format(accuracy(TAGGER, DEV_DATA)))
 
 
 class Parser(object):
@@ -343,7 +329,9 @@ def oracle_moves(gold_heads):
         config = ArcStandardParser.next_config(config, move)
 
 
-def training_examples(vocab_words, vocab_tags, gold_data, parser, batch_size=100):
+def training_examples_parser(
+    vocab_words, vocab_tags, gold_data, parser, batch_size=100
+):
     bx = []
     by = []
 
@@ -373,12 +361,6 @@ def training_examples(vocab_words, vocab_tags, gold_data, parser, batch_size=100
         yield bx, by
 
 
-import torch.nn.functional as F
-import torch.optim as optim
-
-from tqdm import tqdm
-
-
 def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
@@ -394,7 +376,7 @@ def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
-            for bx, by in training_examples(
+            for bx, by in training_examples_parser(
                 vocab_words, vocab_tags, train_data, parser
             ):
                 optimizer.zero_grad()
@@ -422,10 +404,6 @@ def uas(parser, gold_sentences):
     return correct / total
 
 
-PARSER = train_parser(TRAIN_DATA, n_epochs=1)
-print("{:.4f}".format(uas(PARSER, DEV_DATA)))
-
-
 def evaluate(tagger, parser, gold_sentences):
     correct_tagger = 0
     total_tagger = 0
@@ -444,5 +422,22 @@ def evaluate(tagger, parser, gold_sentences):
     return correct_tagger / total_tagger, correct_parser / total_parser
 
 
-acc, uas = evaluate(TAGGER, PARSER, DEV_DATA)
-print("acc: {:.4f}, uas: {:.4f}".format(acc, uas))
+if __name__ == "__main__":
+    import sys
+
+    train_data_filename = "en_ewt-ud-train-projectivized.conllu"
+    dev_data_filename = "en_ewt-ud-dev.conllu"
+
+    if len(sys.argv) > 2:
+        # If we have been given a filename, we will projectivize it
+        filename_projectivize(sys.argv[1], sys.argv[2])
+
+    TRAIN_DATA = Treebank(train_data_filename)
+    DEV_DATA = Treebank(dev_data_filename)
+
+    TAGGER = train_tagger(TRAIN_DATA)
+    print("{:.4f}".format(accuracy(TAGGER, DEV_DATA)))
+    PARSER = train_parser(TRAIN_DATA, n_epochs=1)
+    print("{:.4f}".format(uas(PARSER, DEV_DATA)))
+    acc, uas = evaluate(TAGGER, PARSER, DEV_DATA)
+    print("acc: {:.4f}, uas: {:.4f}".format(acc, uas))

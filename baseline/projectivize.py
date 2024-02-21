@@ -3,16 +3,17 @@
 
 # Bonus: Count the number of projective trees
 
+
 def trees(fp):
     buffer = []
     for line in fp:
         line = line.rstrip()  # strip off the trailing newline
-        if not line.startswith('#'):
+        if not line.startswith("#"):
             if len(line) == 0:
                 yield buffer
                 buffer = []
             else:
-                columns = line.split('\t')
+                columns = line.split("\t")
                 if columns[0].isdigit():  # skip range tokens
                     buffer.append(columns)
 
@@ -88,7 +89,7 @@ def projectivized_trees(fp):
     for tree in trees(fp):
         pheads = projectivize(heads(tree))
         for i, row in enumerate(tree):
-            row[6] = "%d" % pheads[i+1]
+            row[6] = "%d" % pheads[i + 1]
         yield tree
 
 
@@ -100,6 +101,7 @@ def emit(tree):
 
 def cmd_count_projective():
     import sys
+
     k = 0
     n = 0
     for tree in trees(sys.stdin):
@@ -110,10 +112,23 @@ def cmd_count_projective():
 
 def cmd_projectivize():
     import sys
+
     for ptree in projectivized_trees(sys.stdin):
         emit(ptree)
 
 
+def filename_projectivize(filename, target_filename):
+    with open(target_filename, "w") as file_out:
+        with open(filename, "r") as file_in:
+            for ptree in projectivized_trees(file_in):
+                for row in ptree:
+                    file_out.write("\t".join(row) + "\n")
+                file_out.write("\n")
+
+
 if __name__ == "__main__":
     # cmd_count_projective()
-    cmd_projectivize()
+    import sys
+
+    if len(sys.argv) > 2:
+        filename_projectivize(sys.argv[1], sys.argv[2])
