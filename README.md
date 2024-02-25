@@ -1,3 +1,3 @@
 # TDDE09_Project
-
-acc: 0.8804, uas: 0.6612
+Statistics for our baseline:
+Accuracy: 0.8804, Unlabelled attatchment score: 0.6612
