@@ -2,10 +2,12 @@
 # Usage: python projectivize.py < CONLL > CONLL
 
 # Bonus: Count the number of projective trees
+from collections.abc import Iterable
+from typing import TextIO
 
 
-def trees(fp):
-    buffer = []
+def trees(fp: TextIO) -> Iterable[list[str]]:
+    buffer: list[str] = []
     for line in fp:
         stripped_line = line.rstrip()  # strip off the trailing newline
         if not stripped_line.startswith("#"):
@@ -18,7 +20,7 @@ def trees(fp):
                     buffer.append(columns)
 
 
-def heads(rows):
+def heads(rows: list[str]) -> list[int]:
     return [0] + [int(row[6]) for row in rows]
 
 
@@ -27,9 +29,9 @@ SH = 0
 UP = -1
 
 
-def traverse(heads):
-    marked = [False] * len(heads)
-    cursor = 0
+def traverse(heads: list[int]) -> Iterable[tuple[int, int]]:
+    marked: list[bool] = [False] * len(heads)
+    cursor: int = 0
     marked[cursor] = True
     for i in range(len(heads)):
         bend = i
@@ -53,7 +55,7 @@ def traverse(heads):
         cursor = heads[cursor]
 
 
-def is_projective(heads):
+def is_projective(heads: list[int]) -> bool:
     seen = [False] * len(heads)
     for cursor, d in traverse(heads):
         if d == DN:
@@ -64,7 +66,7 @@ def is_projective(heads):
     return True
 
 
-def projectivize(heads):
+def projectivize(heads: list[int]) -> list[int]:
     pheads = [0] * len(heads)
     dangling = [[] for _ in heads]
     head_blk = [False] * len(heads)
@@ -85,7 +87,7 @@ def projectivize(heads):
     return pheads
 
 
-def projectivized_trees(fp):
+def projectivized_trees(fp: TextIO) -> Iterable[list[str]]:
     for tree in trees(fp):
         pheads = projectivize(heads(tree))
         for i, row in enumerate(tree):
@@ -93,13 +95,13 @@ def projectivized_trees(fp):
         yield tree
 
 
-def emit(tree):
+def emit(tree: list[str]) -> None:
     for row in tree:
         print("\t".join(row))
     print()
 
 
-def cmd_count_projective():
+def cmd_count_projective() -> None:
     import sys
 
     k = 0
@@ -110,14 +112,14 @@ def cmd_count_projective():
     print(f"{k / n:.2%}")
 
 
-def cmd_projectivize():
+def cmd_projectivize() -> None:
     import sys
 
     for ptree in projectivized_trees(sys.stdin):
         emit(ptree)
 
 
-def filename_projectivize(filename, target_filename):
+def filename_projectivize(filename: str, target_filename: str) -> None:
     with open(target_filename, "w") as file_out:
         with open(filename) as file_in:
             for ptree in projectivized_trees(file_in):
