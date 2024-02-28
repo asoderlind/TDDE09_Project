@@ -1,3 +1,4 @@
 lint.select = ["I", "F", "E", "B", "W", "D", "UP", "A", "C4", "ICN", "PL", "ARG", "RUF", "NPY"]
 # PLR2004 magic variable check, PLR0913 too many arguments should usually be on
 lint.ignore = ["D100","D101", "D102", "D103", "D105", "D107", "D211", "D213", "PLR2004", "PLR0913"] 
+lint.unfixable = ["F401"] # F401 is annoying if you are in the process of adding imports
