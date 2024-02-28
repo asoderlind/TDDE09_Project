@@ -7,13 +7,13 @@
 def trees(fp):
     buffer = []
     for line in fp:
-        line = line.rstrip()  # strip off the trailing newline
-        if not line.startswith("#"):
-            if len(line) == 0:
+        stripped_line = line.rstrip()  # strip off the trailing newline
+        if not stripped_line.startswith("#"):
+            if len(stripped_line) == 0:
                 yield buffer
                 buffer = []
             else:
-                columns = line.split("\t")
+                columns = stripped_line.split("\t")
                 if columns[0].isdigit():  # skip range tokens
                     buffer.append(columns)
 
@@ -107,7 +107,7 @@ def cmd_count_projective():
     for tree in trees(sys.stdin):
         k += is_projective(heads(tree))
         n += 1
-    print("{:.2%}".format(k / n))
+    print(f"{k / n:.2%}")
 
 
 def cmd_projectivize():
@@ -119,7 +119,7 @@ def cmd_projectivize():
 
 def filename_projectivize(filename, target_filename):
     with open(target_filename, "w") as file_out:
-        with open(filename, "r") as file_in:
+        with open(filename) as file_in:
             for ptree in projectivized_trees(file_in):
                 for row in ptree:
                     file_out.write("\t".join(row) + "\n")

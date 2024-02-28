@@ -1,23 +1,20 @@
 import conllu
 import torch
-import torch.nn as nn
-from collections import Counter
 import torch.nn.functional as F
-import torch.optim as optim
-from tqdm import tqdm
-from torch.utils.data import Dataset
 from projectivize import filename_projectivize
+from torch import nn, optim
+from torch.utils.data import Dataset
+from tqdm import tqdm
 
 
 class Treebank(Dataset):
-
     def __init__(self, filename):
         super().__init__()
         self.items = []
-        with open(filename, "rt", encoding="utf-8") as fp:
+        with open(filename, encoding="utf-8") as fp:
             for tokens in conllu.parse_incr(fp):
                 sentence = [("[ROOT]", "[ROOT]", 0)]
-                for token in tokens.filter(id=lambda x: type(x) is int):
+                for token in tokens.filter(id=lambda x: isinstance(x, int)):
                     sentence.append((token["form"], token["upos"], token["head"]))
                 self.items.append(sentence)
 
@@ -48,7 +45,6 @@ def make_vocabs(gold_data):
 
 
 class FixedWindowModel(nn.Module):
-
     def __init__(self, embedding_specs, hidden_dim, output_dim):
         super().__init__()
 
@@ -57,7 +53,7 @@ class FixedWindowModel(nn.Module):
         for n, num_embeddings, embedding_dim in embedding_specs:
             embedding = nn.Embedding(num_embeddings, embedding_dim, padding_idx=0)
             nn.init.normal_(embedding.weight, std=1e-2)
-            for i in range(n):
+            for _ in range(n):
                 self.embeddings.append(embedding)
 
         # Set up the FFN
@@ -73,14 +69,12 @@ class FixedWindowModel(nn.Module):
         return self.pipe(torch.cat(embedded, -1))
 
 
-class Tagger(object):
-
+class Tagger:
     def predict(self, sentence):
         raise NotImplementedError
 
 
 class FixedWindowTagger(Tagger):
-
     def __init__(
         self, vocab_words, vocab_tags, word_dim=50, tag_dim=10, hidden_dim=100
     ):
@@ -153,7 +147,7 @@ def training_examples_tagger(
             yield bx, by
 
 
-def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):
+def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG001
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
 
@@ -164,7 +158,7 @@ def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):
     optimizer = optim.Adam(tagger.model.parameters(), lr=lr)
 
     # Training loop
-    for epoch in range(n_epochs):
+    for _ in range(n_epochs):
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(len(s) for s in train_data)) as pbar:
@@ -198,14 +192,12 @@ def accuracy(tagger, gold_data):
     return correct / total
 
 
-class Parser(object):
-
+class Parser:
     def predict(self, words, tags):
         raise NotImplementedError
 
 
 class ArcStandardParser(Parser):
-
     MOVES = tuple(range(3))
 
     SH, LA, RA = MOVES
@@ -252,7 +244,6 @@ class ArcStandardParser(Parser):
 
 
 class FixedWindowParser(ArcStandardParser):
-
     def __init__(
         self, vocab_words, vocab_tags, word_dim=50, tag_dim=10, hidden_dim=180
     ):
@@ -361,7 +352,7 @@ def training_examples_parser(
         yield bx, by
 
 
-def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):
+def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG001
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
 
@@ -372,7 +363,7 @@ def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
 
     # Training loop
-    for epoch in range(n_epochs):
+    for _ in range(n_epochs):
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
@@ -436,8 +427,8 @@ if __name__ == "__main__":
     DEV_DATA = Treebank(dev_data_filename)
 
     TAGGER = train_tagger(TRAIN_DATA)
-    print("{:.4f}".format(accuracy(TAGGER, DEV_DATA)))
+    print(f"{accuracy(TAGGER, DEV_DATA):.4f}")
     PARSER = train_parser(TRAIN_DATA, n_epochs=1)
-    print("{:.4f}".format(uas(PARSER, DEV_DATA)))
+    print(f"{uas(PARSER, DEV_DATA):.4f}")
     acc, uas = evaluate(TAGGER, PARSER, DEV_DATA)
-    print("acc: {:.4f}, uas: {:.4f}".format(acc, uas))
+    print(f"acc: {acc:.4f}, uas: {uas:.4f}")
