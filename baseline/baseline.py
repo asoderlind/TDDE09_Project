@@ -1,19 +1,23 @@
+from collections.abc import Iterable
+from typing import cast
+
 import conllu
 import torch
 import torch.nn.functional as F
 from projectivize import filename_projectivize
 from torch import nn, optim
+from torch.types import Number
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
 
 class Treebank(Dataset):
-    def __init__(self, filename):
+    def __init__(self, filename: str) -> None:
         super().__init__()
-        self.items = []
+        self.items: list[list[tuple[str, str, int]]] = []
         with open(filename, encoding="utf-8") as fp:
             for tokens in conllu.parse_incr(fp):
-                sentence = [("[ROOT]", "[ROOT]", 0)]
+                sentence: list[tuple[str, str, int]] = [("[ROOT]", "[ROOT]", 0)]
                 for token in tokens.filter(id=lambda x: isinstance(x, int)):
                     sentence.append((token["form"], token["upos"], token["head"]))
                 self.items.append(sentence)
@@ -32,7 +36,7 @@ PAD_IDX = 0
 UNK_IDX = 1
 
 
-def make_vocabs(gold_data):
+def make_vocabs(gold_data: Treebank) -> tuple[dict[str, int], dict[str, int]]:
     vocab_words = {PAD: PAD_IDX, UNK: UNK_IDX}
     vocab_tags = {PAD: PAD_IDX}
     for sentence in gold_data:
@@ -45,7 +49,12 @@ def make_vocabs(gold_data):
 
 
 class FixedWindowModel(nn.Module):
-    def __init__(self, embedding_specs, hidden_dim, output_dim):
+    def __init__(
+        self,
+        embedding_specs: list[tuple[int, int, int]],
+        hidden_dim: int,
+        output_dim: int,
+    ) -> None:
         super().__init__()
 
         # Create the embeddings based on the given specifications
@@ -64,7 +73,7 @@ class FixedWindowModel(nn.Module):
             nn.Linear(hidden_dim, output_dim),
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         embedded = [e(x[..., i]) for i, e in enumerate(self.embeddings)]
         return self.pipe(torch.cat(embedded, -1))
 
@@ -76,9 +85,14 @@ class Tagger:
 
 class FixedWindowTagger(Tagger):
     def __init__(
-        self, vocab_words, vocab_tags, word_dim=50, tag_dim=10, hidden_dim=100
-    ):
-        embedding_specs = [
+        self,
+        vocab_words: dict[str, int],
+        vocab_tags: dict[str, int],
+        word_dim: int = 50,
+        tag_dim: int = 10,
+        hidden_dim: int = 100,
+    ) -> None:
+        embedding_specs: list[tuple[int, int, int]] = [
             (3, len(vocab_words), word_dim),
             (1, len(vocab_tags), tag_dim),
         ]
@@ -86,7 +100,9 @@ class FixedWindowTagger(Tagger):
         self.w2i = vocab_words
         self.i2t = {i: t for t, i in vocab_tags.items()}
 
-    def featurize(self, words, i, pred_tags):
+    def featurize(
+        self, words: list[int], i: int, pred_tags: list[Number]
+    ) -> torch.Tensor:
         x = torch.zeros(4, dtype=torch.long)
         x[0] = words[i]
         x[1] = words[i - 1] if i > 0 else PAD_IDX
@@ -94,21 +110,26 @@ class FixedWindowTagger(Tagger):
         x[3] = pred_tags[i - 1] if i > 0 else PAD_IDX
         return x
 
-    def predict(self, words):
-        words = [self.w2i.get(w, UNK_IDX) for w in words]
-        pred_tags = []
+    def predict(self, words: list[str]) -> list[str]:
+        words: list[int] = [self.w2i.get(w, UNK_IDX) for w in words]
+        pred_tags: list[Number] = []
         for i in range(len(words)):
             features = self.featurize(words, i, pred_tags)
             with torch.no_grad():
                 scores = self.model.forward(features)
-            pred_tag = scores.argmax().item()
+            pred_tag: Number = scores.argmax().item()
             pred_tags.append(pred_tag)
         return [self.i2t[i] for i in pred_tags]
 
 
 def training_examples_tagger(
-    vocab_words, vocab_tags, gold_data, tagger, batch_size=100, shuffle=False
-):
+    vocab_words: dict[str, int],
+    vocab_tags: dict[str, int],
+    gold_data: Treebank,
+    tagger: FixedWindowTagger,
+    batch_size: int = 100,
+    shuffle: bool = False,
+) -> Iterable[tuple[torch.Tensor, torch.LongTensor]]:
     bx = []
     by = []
     for sentence in gold_data:
@@ -147,7 +168,12 @@ def training_examples_tagger(
             yield bx, by
 
 
-def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG001
+def train_tagger(
+    train_data: Treebank,
+    n_epochs: int = 1,
+    batch_size: int = 100,  # noqa: ARG001
+    lr: float = 1e-2,
+) -> FixedWindowTagger:
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
 
@@ -178,11 +204,13 @@ def train_tagger(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG0
     return tagger
 
 
-def accuracy(tagger, gold_data):
+def accuracy(tagger: FixedWindowTagger, gold_data: Treebank) -> float:
     correct = 0
     total = 0
     for sentence in gold_data:
-        words, gold_tags, _ = zip(*sentence)
+        sentence = cast(list[tuple[str, str, int]], sentence)
+        zipped_object: tuple[list[str], list[str], list[int]] = zip(*sentence)
+        words, gold_tags, _ = zipped_object
         pred_tags = tagger.predict(words)
         for gold_tag, pred_tag in zip(
             gold_tags[1:], pred_tags[1:]
@@ -203,13 +231,13 @@ class ArcStandardParser(Parser):
     SH, LA, RA = MOVES
 
     @staticmethod
-    def initial_config(num_words):
+    def initial_config(num_words: int) -> tuple[int, list, list[int]]:
         return 0, [], [0] * num_words
 
     @staticmethod
-    def valid_moves(config):
+    def valid_moves(config: tuple[int, list, list[int]]) -> list[int]:
         pos, stack, heads = config
-        moves = []
+        moves: list[int] = []
         if pos < len(heads):
             moves.append(ArcStandardParser.SH)
         if len(stack) >= 3:  # disallow LA with root as dependent
@@ -219,7 +247,9 @@ class ArcStandardParser(Parser):
         return moves
 
     @staticmethod
-    def next_config(config, move):
+    def next_config(
+        config: tuple[int, list, list[int]], move: int
+    ) -> tuple[int, list, list[int]]:
         pos, stack, heads = config
         stack = list(stack)  # copy because we will modify it
         if move == ArcStandardParser.SH:
@@ -238,16 +268,21 @@ class ArcStandardParser(Parser):
         return pos, stack, heads
 
     @staticmethod
-    def is_final_config(config):
+    def is_final_config(config: tuple[int, list, list[int]]) -> bool:
         pos, stack, heads = config
         return pos == len(heads) and len(stack) == 1
 
 
 class FixedWindowParser(ArcStandardParser):
     def __init__(
-        self, vocab_words, vocab_tags, word_dim=50, tag_dim=10, hidden_dim=180
+        self,
+        vocab_words: dict[str, int],
+        vocab_tags: dict[str, int],
+        word_dim: int = 50,
+        tag_dim: int = 10,
+        hidden_dim: int = 180,
     ):
-        embedding_specs = [
+        embedding_specs: list[tuple[int, int, int]] = [
             (3, len(vocab_words), word_dim),
             (3, len(vocab_tags), tag_dim),
         ]
@@ -257,7 +292,9 @@ class FixedWindowParser(ArcStandardParser):
         self.w2i = vocab_words
         self.t2i = vocab_tags
 
-    def featurize(self, words, tags, config):
+    def featurize(
+        self, words: list[int], tags: list[int], config: tuple[int, list, list[int]]
+    ) -> torch.Tensor:
         i, stack, heads = config
         x = torch.zeros(6, dtype=torch.long)
         x[0] = words[i] if i < len(words) else PAD_IDX
@@ -268,9 +305,9 @@ class FixedWindowParser(ArcStandardParser):
         x[5] = tags[stack[-2]] if len(stack) >= 2 else PAD_IDX
         return x
 
-    def predict(self, words, tags):
-        words = [self.w2i.get(w, UNK_IDX) for w in words]
-        tags = [self.t2i.get(t, UNK_IDX) for t in tags]
+    def predict(self, words: list[str], tags: list[str]) -> list[int]:
+        words: list[int] = [self.w2i.get(w, UNK_IDX) for w in words]
+        tags: list[int] = [self.t2i.get(t, UNK_IDX) for t in tags]
         config = self.initial_config(len(words))
         valid_moves = self.valid_moves(config)
         while valid_moves:
@@ -286,11 +323,14 @@ class FixedWindowParser(ArcStandardParser):
 
             config = self.next_config(config, pred_move)
             valid_moves = self.valid_moves(config)
+        config = cast(tuple[int, list, list[int]], config)
         i, stack, pred_heads = config
         return pred_heads
 
 
-def oracle_moves(gold_heads):
+def oracle_moves(
+    gold_heads: Treebank,
+) -> Iterable[tuple[tuple[int, list, list[int]], int]]:
     # Keep track of how many dependents each head still needs to find
     remaining_count = [0] * len(gold_heads)
     for node in gold_heads:
@@ -321,8 +361,12 @@ def oracle_moves(gold_heads):
 
 
 def training_examples_parser(
-    vocab_words, vocab_tags, gold_data, parser, batch_size=100
-):
+    vocab_words: dict[str, int],
+    vocab_tags: dict[str, int],
+    gold_data: Treebank,
+    parser: FixedWindowParser,
+    batch_size: int = 100,
+) -> Iterable[tuple[torch.Tensor, torch.LongTensor]]:
     bx = []
     by = []
 
@@ -352,7 +396,12 @@ def training_examples_parser(
         yield bx, by
 
 
-def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG001
+def train_parser(
+    train_data: Treebank,
+    n_epochs: int = 1,
+    batch_size: int = 100,  # noqa: ARG001
+    lr: float = 1e-2,
+) -> FixedWindowParser:
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
 
@@ -383,11 +432,14 @@ def train_parser(train_data, n_epochs=1, batch_size=100, lr=1e-2):  # noqa: ARG0
     return parser
 
 
-def uas(parser, gold_sentences):
+def uas(parser: FixedWindowParser, gold_sentences: Treebank) -> float:
     correct = 0
     total = 0
     for sentence in gold_sentences:
-        words, tags, gold_heads = zip(*sentence)
+        print(sentence[0][0][0])
+        sentence = cast(list[tuple[str, str, int]], sentence)
+        zipped_object: tuple[list[str], list[str, list[int]]] = zip(*sentence)
+        words, tags, gold_heads = zipped_object
         pred_heads = parser.predict(words, tags)
         for gold, pred in zip(gold_heads[1:], pred_heads[1:]):  # ignore the pseudo-root
             correct += int(gold == pred)
@@ -395,7 +447,9 @@ def uas(parser, gold_sentences):
     return correct / total
 
 
-def evaluate(tagger, parser, gold_sentences):
+def evaluate(
+    tagger: FixedWindowTagger, parser: FixedWindowParser, gold_sentences: Treebank
+) -> tuple[float, float]:
     correct_tagger = 0
     total_tagger = 0
     correct_parser = 0
