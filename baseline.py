@@ -232,6 +232,7 @@ class Parser:
         raise NotImplementedError
 
 
+
 class ArcStandardParser(Parser):
     MOVES = tuple(range(3))
 
@@ -278,6 +279,61 @@ class ArcStandardParser(Parser):
     def is_final_config(config: tuple[int, list, list[int]]) -> bool:
         pos, stack, heads = config
         return pos == len(heads) and len(stack) == 1
+
+
+# --------------------------
+# ARC HYBRID IMPLEMENTATION
+#   - LA from arc-eager 
+#   - rest from arc-standard
+# --------------------------
+class ArcHybridParser(Parser):
+    MOVES = tuple(range(3))
+
+    SH, LA, RA = MOVES
+
+    @staticmethod
+    def initial_config(num_words: int) -> tuple[int, list, list[int]]:
+        return 0, [], [0] * num_words
+
+    @staticmethod
+    def valid_moves(config: tuple[int, list, list[int]]) -> list[int]:
+        pos, stack, heads = config
+        moves: list[int] = []
+        if pos < len(heads):
+            moves.append(ArcHybridParser.SH)
+        #from arc-eager
+        if len(stack) >= 2 and heads[stack[-1]] == 0: #Allow only if top of stack has no head
+            moves.append(ArcHybridParser.LA)
+        if len(stack) >= 2:
+            moves.append(ArcHybridParser.RA)
+        return moves
+
+    #Changed moves
+    @staticmethod
+    def next_config(
+        config: tuple[int, list, list[int]], move: int
+    ) -> tuple[int, list, list[int]]:
+        pos, stack, heads = config
+        stack = list(stack)  # copy because we will modify it
+        heads = list(heads)  # copy because we will modify it
+        if move == ArcHybridParser.SH:
+            stack.append(pos)
+            pos += 1
+        #from arc-eager
+        elif move == ArcHybridParser.LA:
+            s1 = stack.pop() 
+            heads[pos] = s1  #Arc from front of buffer to top of stack
+            #pos += 1
+        elif move == ArcHybridParser.RA:
+            s1 = stack.pop()
+            s2 = stack[-1]
+            heads[s1] = s2
+
+    @staticmethod
+    def is_final_config(config: tuple[int, list, list[int]]) -> bool:
+        pos, stack, heads = config
+        return pos == len(heads) and len(stack) == 1
+
 
 
 class FixedWindowParser(ArcStandardParser):
