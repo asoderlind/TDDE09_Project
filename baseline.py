@@ -12,6 +12,8 @@ from tqdm import tqdm
 
 from projectivize import filename_projectivize
 
+torch.manual_seed(0)
+
 
 class Treebank(Dataset):
     def __init__(self, filename: str) -> None:
@@ -485,17 +487,13 @@ def oracle_moves_hybrid(
     config = ArcHybridParser.initial_config(len(gold_heads))
     while not ArcHybridParser.is_final_config(config):
         pos, stack, heads = config
-        print("pos = ", pos)
-        print("stack = ", stack)
-        print("heads = ", heads)
-        print("remaining_count = ", remaining_count)
         if len(stack) >= 1:
             s1 = stack[-1]
             if gold_heads[s1] == pos and remaining_count[s1] == 0:
                 move = ArcHybridParser.LA
                 yield config, move
                 config = ArcHybridParser.next_config(config, move)
-                remaining_count[s1] -= 1
+                remaining_count[pos] -= 1
                 continue
         if len(stack) >= 2:
             s1 = stack[-1]
