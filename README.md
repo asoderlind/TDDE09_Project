@@ -1,16 +1,20 @@
 # TDDE09_Project
 
-## Statistics:
+## Data:
 
-For the current baseline implementation.
+For the Arc-standard + Static oracle implementation:
 
-**en_ewt**
-_Accuracy_: 0.8804,
-_Unlabelled attachment score_: 0.6612
+| Tagger   | Parsing system | Oracle | Language | Accuracy | Unlabelled attachment score |
+| -------- | -------------- | ------ | -------- | -------- | --------------------------- |
+| Standard | Arc-standard   | Static | EN_EWT   | 0.8804   | 0.6612                      |
+| Standard | Arc-standard   | Static | JA_GSD   | 0.9486   | 0.8389                      |
 
-**ja_gsd**
-_Accuracy_: 0.9486
-_Unlabelled attachment score_: 0.8389
+For the Arc-hybrid + Static oracle implementation:
+
+| Tagger   | Parsing system | Oracle | Language | Accuracy | Unlabelled attachment score |
+| -------- | -------------- | ------ | -------- | -------- | --------------------------- |
+| Standard | Arc-hybrid     | Static | EN_EWT   | TBA      | TBA                         |
+| Standard | Arc-hybrid     | Static | JA_GSD   | TBA      | TBA                         |
 
 ## Usage
 
