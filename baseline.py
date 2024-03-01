@@ -232,7 +232,6 @@ class Parser:
         raise NotImplementedError
 
 
-
 class ArcStandardParser(Parser):
     MOVES = tuple(range(3))
 
@@ -283,7 +282,7 @@ class ArcStandardParser(Parser):
 
 # --------------------------
 # ARC HYBRID IMPLEMENTATION
-#   - LA from arc-eager 
+#   - LA from arc-eager
 #   - rest from arc-standard
 # --------------------------
 class ArcHybridParser(Parser):
@@ -301,14 +300,14 @@ class ArcHybridParser(Parser):
         moves: list[int] = []
         if pos < len(heads):
             moves.append(ArcHybridParser.SH)
-        #from arc-eager
-        if len(stack) >= 2 and heads[stack[-1]] == 0: #Allow only if top of stack has no head
+        # from arc-eager
+        if len(stack) >= 2:  # Allow only if top of stack has no head
             moves.append(ArcHybridParser.LA)
         if len(stack) >= 2:
             moves.append(ArcHybridParser.RA)
         return moves
 
-    #Changed moves
+    # Changed moves
     @staticmethod
     def next_config(
         config: tuple[int, list, list[int]], move: int
@@ -319,11 +318,11 @@ class ArcHybridParser(Parser):
         if move == ArcHybridParser.SH:
             stack.append(pos)
             pos += 1
-        #from arc-eager
+        # from arc-eager
         elif move == ArcHybridParser.LA:
-            s1 = stack.pop() 
-            heads[pos] = s1  #Arc from front of buffer to top of stack
-            #pos += 1
+            s1 = stack.pop()
+            heads[pos] = s1  # Arc from front of buffer to top of stack
+            # pos += 1
         elif move == ArcHybridParser.RA:
             s1 = stack.pop()
             s2 = stack[-1]
@@ -333,7 +332,6 @@ class ArcHybridParser(Parser):
     def is_final_config(config: tuple[int, list, list[int]]) -> bool:
         pos, stack, heads = config
         return pos == len(heads) and len(stack) == 1
-
 
 
 class FixedWindowParser(ArcStandardParser):
