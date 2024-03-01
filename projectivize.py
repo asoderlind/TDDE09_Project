@@ -121,8 +121,8 @@ def cmd_projectivize() -> None:
 
 def filename_projectivize(filename: str, target_filename: str) -> None:
     print(f"Projectivizing {filename} to {target_filename}")
-    with open(target_filename, "w") as file_out:
-        with open(filename) as file_in:
+    with open(target_filename, "w", encoding="utf-8") as file_out:
+        with open(filename, encoding="utf-8") as file_in:
             for ptree in projectivized_trees(file_in):
                 for row in ptree:
                     file_out.write("\t".join(row) + "\n")
