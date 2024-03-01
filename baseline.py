@@ -300,14 +300,12 @@ class ArcHybridParser(Parser):
         moves: list[int] = []
         if pos < len(heads):
             moves.append(ArcHybridParser.SH)
-        # from arc-eager
-        if len(stack) >= 2:  # Allow only if top of stack has no head
+        if len(stack) >= 1 and pos < len(heads):
             moves.append(ArcHybridParser.LA)
         if len(stack) >= 2:
             moves.append(ArcHybridParser.RA)
         return moves
 
-    # Changed moves
     @staticmethod
     def next_config(
         config: tuple[int, list, list[int]], move: int
@@ -318,15 +316,14 @@ class ArcHybridParser(Parser):
         if move == ArcHybridParser.SH:
             stack.append(pos)
             pos += 1
-        # from arc-eager
         elif move == ArcHybridParser.LA:
             s1 = stack.pop()
-            heads[pos] = s1  # Arc from front of buffer to top of stack
-            # pos += 1
-        elif move == ArcHybridParser.RA:
+            heads[s1] = pos  # Arc from front of buffer to top of stack
+        elif move == ArcHybridParser.RA:  # arc-standard
             s1 = stack.pop()
             s2 = stack[-1]
             heads[s1] = s2
+        return pos, stack, heads
 
     @staticmethod
     def is_final_config(config: tuple[int, list, list[int]]) -> bool:
@@ -349,6 +346,61 @@ class FixedWindowParser(ArcStandardParser):
         ]
         self.model = FixedWindowModel(
             embedding_specs, hidden_dim, len(ArcStandardParser.MOVES)
+        )
+        self.w2i = vocab_words
+        self.t2i = vocab_tags
+
+    def featurize(
+        self, words: list[int], tags: list[int], config: tuple[int, list, list[int]]
+    ) -> torch.Tensor:
+        i, stack, heads = config
+        x = torch.zeros(6, dtype=torch.long)
+        x[0] = words[i] if i < len(words) else PAD_IDX
+        x[1] = words[stack[-1]] if len(stack) >= 1 else PAD_IDX
+        x[2] = words[stack[-2]] if len(stack) >= 2 else PAD_IDX
+        x[3] = tags[i] if i < len(tags) else PAD_IDX
+        x[4] = tags[stack[-1]] if len(stack) >= 1 else PAD_IDX
+        x[5] = tags[stack[-2]] if len(stack) >= 2 else PAD_IDX
+        return x
+
+    def predict(self, words: list[str], tags: list[str]) -> list[int]:
+        words: list[int] = [self.w2i.get(w, UNK_IDX) for w in words]
+        tags: list[int] = [self.t2i.get(t, UNK_IDX) for t in tags]
+        config = self.initial_config(len(words))
+        valid_moves = self.valid_moves(config)
+        while valid_moves:
+            features = self.featurize(words, tags, config)
+            with torch.no_grad():
+                scores = self.model.forward(features)
+
+            # We may only predict valid transitions
+            best_score, pred_move = float("-inf"), None
+            for move in valid_moves:
+                if scores[move] > best_score:
+                    best_score, pred_move = scores[move], move
+
+            config = self.next_config(config, pred_move)
+            valid_moves = self.valid_moves(config)
+        config = cast(tuple[int, list, list[int]], config)
+        i, stack, pred_heads = config
+        return pred_heads
+
+
+class FixedWindowParserHybrid(ArcHybridParser):
+    def __init__(
+        self,
+        vocab_words: dict[str, int],
+        vocab_tags: dict[str, int],
+        word_dim: int = 50,
+        tag_dim: int = 10,
+        hidden_dim: int = 180,
+    ):
+        embedding_specs: list[tuple[int, int, int]] = [
+            (3, len(vocab_words), word_dim),
+            (3, len(vocab_tags), tag_dim),
+        ]
+        self.model = FixedWindowModel(
+            embedding_specs, hidden_dim, len(ArcHybridParser.MOVES)
         )
         self.w2i = vocab_words
         self.t2i = vocab_tags
@@ -421,6 +473,44 @@ def oracle_moves(
         config = ArcStandardParser.next_config(config, move)
 
 
+def oracle_moves_hybrid(
+    gold_heads: Treebank,
+) -> Iterable[tuple[tuple[int, list, list[int]], int]]:
+    # Keep track of how many dependents each head still needs to find
+    remaining_count = [0] * len(gold_heads)
+    for node in gold_heads:
+        remaining_count[node] += 1
+
+    # Simulate a parser
+    config = ArcHybridParser.initial_config(len(gold_heads))
+    while not ArcHybridParser.is_final_config(config):
+        pos, stack, heads = config
+        print("pos = ", pos)
+        print("stack = ", stack)
+        print("heads = ", heads)
+        print("remaining_count = ", remaining_count)
+        if len(stack) >= 1:
+            s1 = stack[-1]
+            if gold_heads[s1] == pos and remaining_count[s1] == 0:
+                move = ArcHybridParser.LA
+                yield config, move
+                config = ArcHybridParser.next_config(config, move)
+                remaining_count[s1] -= 1
+                continue
+        if len(stack) >= 2:
+            s1 = stack[-1]
+            s2 = stack[-2]
+            if gold_heads[s1] == s2 and remaining_count[s1] == 0:
+                move = ArcHybridParser.RA
+                yield config, move
+                config = ArcHybridParser.next_config(config, move)
+                remaining_count[s2] -= 1
+                continue
+        move = ArcHybridParser.SH
+        yield config, move
+        config = ArcHybridParser.next_config(config, move)
+
+
 def training_examples_parser(
     vocab_words: dict[str, int],
     vocab_tags: dict[str, int],
@@ -441,6 +531,42 @@ def training_examples_parser(
 
         # Call the oracle
         for config, gold_move in oracle_moves(gold_heads):
+            bx.append(parser.featurize(words, tags, config))
+            by.append(gold_move)
+            if len(bx) >= batch_size:
+                bx = torch.stack(bx)
+                by = torch.LongTensor(by)
+                yield bx, by
+                bx = []
+                by = []
+
+    # Check whether there is an incomplete batch
+    if bx:
+        bx = torch.stack(bx)
+        by = torch.LongTensor(by)
+        yield bx, by
+
+
+def training_examples_parser_hybrid(
+    vocab_words: dict[str, int],
+    vocab_tags: dict[str, int],
+    gold_data: Treebank,
+    parser: FixedWindowParser,
+    batch_size: int = 100,
+) -> Iterable[tuple[torch.Tensor, torch.LongTensor]]:
+    bx = []
+    by = []
+
+    for sentence in gold_data:
+        # Separate the words, gold tags, and gold heads
+        words, tags, gold_heads = zip(*sentence)
+
+        # Encode words and tags using the vocabularies
+        words = [vocab_words.get(w, UNK_IDX) for w in words]
+        tags = [vocab_tags[t] for t in tags]
+
+        # Call the oracle
+        for config, gold_move in oracle_moves_hybrid(gold_heads):
             bx.append(parser.featurize(words, tags, config))
             by.append(gold_move)
             if len(bx) >= batch_size:
@@ -493,7 +619,45 @@ def train_parser(
     return parser
 
 
-def get_uas(parser: FixedWindowParser, gold_sentences: Treebank) -> float:
+def train_parser_hybrid(
+    train_data: Treebank,
+    n_epochs: int = 1,
+    batch_size: int = 100,  # noqa: ARG001
+    lr: float = 1e-2,
+) -> FixedWindowParserHybrid:
+    # Create the vocabularies
+    vocab_words, vocab_tags = make_vocabs(train_data)
+
+    # Instantiate the parser
+    parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
+
+    # Instantiate the optimizer
+    optimizer = optim.Adam(parser.model.parameters(), lr=lr)
+
+    # Training loop
+    for _ in range(n_epochs):
+        running_loss = 0
+        n_examples = 0
+        with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
+            for bx, by in training_examples_parser_hybrid(
+                vocab_words, vocab_tags, train_data, parser
+            ):
+                optimizer.zero_grad()
+                output = parser.model.forward(bx)
+                loss = F.cross_entropy(output, by)
+                loss.backward()
+                optimizer.step()
+                running_loss += loss.item()
+                n_examples += 1
+                pbar.set_postfix(loss=running_loss / n_examples)
+                pbar.update(len(bx))
+
+    return parser
+
+
+def get_uas(
+    parser: FixedWindowParser | FixedWindowParserHybrid, gold_sentences: Treebank
+) -> float:
     correct = 0
     total = 0
     for sentence in gold_sentences:
@@ -508,7 +672,9 @@ def get_uas(parser: FixedWindowParser, gold_sentences: Treebank) -> float:
 
 
 def evaluate(
-    tagger: FixedWindowTagger, parser: FixedWindowParser, gold_sentences: Treebank
+    tagger: FixedWindowTagger,
+    parser: FixedWindowParser | FixedWindowParserHybrid,
+    gold_sentences: Treebank,
 ) -> tuple[float, float]:
     correct_tagger = 0
     total_tagger = 0
@@ -560,7 +726,7 @@ if __name__ == "__main__":
 
         tagger = train_tagger(train_data)
         print(f"{accuracy(tagger, dev_data):.4f}")
-        parser = train_parser(train_data, n_epochs=1)
+        parser = train_parser_hybrid(train_data, n_epochs=1)
         print(f"{get_uas(parser, dev_data):.4f}")
         acc, uas = evaluate(tagger, parser, dev_data)
         print(f"acc: {acc:.4f}, uas: {uas:.4f}")
