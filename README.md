@@ -2,19 +2,14 @@
 
 ## Data:
 
-For the Arc-standard + Static oracle implementation:
+We set the seed `torch.manual_seed(0)` for reproducibiilty.
 
 | Tagger   | Parsing system | Oracle | Language | Accuracy | Unlabelled attachment score |
 | -------- | -------------- | ------ | -------- | -------- | --------------------------- |
-| Standard | Arc-standard   | Static | EN_EWT   | 0.8804   | 0.6612                      |
-| Standard | Arc-standard   | Static | JA_GSD   | 0.9486   | 0.8389                      |
-
-For the Arc-hybrid + Static oracle implementation:
-
-| Tagger   | Parsing system | Oracle | Language | Accuracy | Unlabelled attachment score |
-| -------- | -------------- | ------ | -------- | -------- | --------------------------- |
-| Standard | Arc-hybrid     | Static | EN_EWT   | TBA      | TBA                         |
-| Standard | Arc-hybrid     | Static | JA_GSD   | TBA      | TBA                         |
+| Standard | Arc-standard   | Static | EN_EWT   | 0.8827   | 0.6619                      |
+| Standard | Arc-hybrid     | Static | EN_EWT   | 0.8827   | 0.6244                      |
+| Standard | Arc-standard   | Static | JA_GSD   | 0.9548   | 0.8426                      |
+| Standard | Arc-hybrid     | Static | JA_GSD   | 0.9548   | 0.7628                      |
 
 ## Usage
 
