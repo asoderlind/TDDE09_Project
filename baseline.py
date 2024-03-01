@@ -583,42 +583,7 @@ def training_examples_parser_hybrid(
 
 def train_parser(
     train_data: Treebank,
-    n_epochs: int = 1,
-    batch_size: int = 100,  # noqa: ARG001
-    lr: float = 1e-2,
-) -> FixedWindowParser:
-    # Create the vocabularies
-    vocab_words, vocab_tags = make_vocabs(train_data)
-
-    # Instantiate the parser
-    parser = FixedWindowParser(vocab_words, vocab_tags)
-
-    # Instantiate the optimizer
-    optimizer = optim.Adam(parser.model.parameters(), lr=lr)
-
-    # Training loop
-    for _ in range(n_epochs):
-        running_loss = 0
-        n_examples = 0
-        with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
-            for bx, by in training_examples_parser(
-                vocab_words, vocab_tags, train_data, parser
-            ):
-                optimizer.zero_grad()
-                output = parser.model.forward(bx)
-                loss = F.cross_entropy(output, by)
-                loss.backward()
-                optimizer.step()
-                running_loss += loss.item()
-                n_examples += 1
-                pbar.set_postfix(loss=running_loss / n_examples)
-                pbar.update(len(bx))
-
-    return parser
-
-
-def train_parser_hybrid(
-    train_data: Treebank,
+    parser_type: str = "arc-standard",
     n_epochs: int = 1,
     batch_size: int = 100,  # noqa: ARG001
     lr: float = 1e-2,
@@ -627,7 +592,17 @@ def train_parser_hybrid(
     vocab_words, vocab_tags = make_vocabs(train_data)
 
     # Instantiate the parser
-    parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
+    parser = (
+        FixedWindowParserHybrid(vocab_words, vocab_tags)
+        if parser_type == "arc-hybrid"
+        else FixedWindowParser(vocab_words, vocab_tags)
+    )
+
+    training_examples = (
+        training_examples_parser_hybrid(vocab_words, vocab_tags, train_data, parser)
+        if parser_type == "arc-hybrid"
+        else training_examples_parser(vocab_words, vocab_tags, train_data, parser)
+    )
 
     # Instantiate the optimizer
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
@@ -637,9 +612,7 @@ def train_parser_hybrid(
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
-            for bx, by in training_examples_parser_hybrid(
-                vocab_words, vocab_tags, train_data, parser
-            ):
+            for bx, by in training_examples:
                 optimizer.zero_grad()
                 output = parser.model.forward(bx)
                 loss = F.cross_entropy(output, by)
@@ -724,7 +697,7 @@ if __name__ == "__main__":
 
         tagger = train_tagger(train_data)
         print(f"{accuracy(tagger, dev_data):.4f}")
-        parser = train_parser_hybrid(train_data, n_epochs=1)
+        parser = train_parser(train_data, parser_type="arc-standard", n_epochs=1)
         print(f"{get_uas(parser, dev_data):.4f}")
         acc, uas = evaluate(tagger, parser, dev_data)
         print(f"acc: {acc:.4f}, uas: {uas:.4f}")
