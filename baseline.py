@@ -310,8 +310,8 @@ class ArcHybridParser(Parser):
 
     @staticmethod
     def next_config(
-        config: tuple[int, list, list[int]], move: int
-    ) -> tuple[int, list, list[int]]:
+        config: tuple[int, list[int], list[int]], move: int
+    ) -> tuple[int, list[int], list[int]]:
         pos, stack, heads = config
         stack = list(stack)  # copy because we will modify it
         heads = list(heads)  # copy because we will modify it
@@ -331,6 +331,66 @@ class ArcHybridParser(Parser):
     def is_final_config(config: tuple[int, list, list[int]]) -> bool:
         pos, stack, heads = config
         return pos == len(heads) and len(stack) == 1
+
+    # True if it can be done at zero cost
+    @staticmethod
+    def zero_cost_sh(
+        config: tuple[int, list[int], list[int]], gold_heads: list[int]
+    ) -> bool:
+        pos, stack, heads = config
+
+        # avoid out of range error
+        if len(stack) == 0:
+            return True
+
+        # check so that the position that's about to be shifted isn't a gold head for a
+        # position in the stack or the reverse (in that case LA/RA might be zero cost)
+        for stack_pos in stack[0:-1]:
+            if gold_heads[stack_pos] == pos:
+                return False
+            if gold_heads[pos] == stack_pos:
+                return False
+
+        return True
+
+    @staticmethod
+    def zero_cost_la(
+        config: tuple[int, list[int], list[int]], gold_heads: list[int]
+    ) -> bool:
+        pos, stack, heads = config
+
+        # if we pop stack[-1], it won't be able to find its gold-standard dependant.
+        for buffer_pos in range(pos, len(heads)):
+            if stack[-1] == gold_heads[buffer_pos]:
+                return False
+
+        # if we pop stack[-1], it won't be able to find its gold-standard head.
+        if len(stack) > 1:
+            if stack[-2] == gold_heads[stack[-1]]:
+                return False
+
+        # if we pop stack[-1], it won't be able to find its gold-standard head.
+        for buffer_pos in range(pos + 1, len(heads)):
+            if buffer_pos == gold_heads[stack[-1]]:
+                return False
+        return True
+
+    @staticmethod
+    def zero_cost_ra(
+        config: tuple[int, list[int], list[int]], gold_heads: list[int]
+    ) -> bool:
+        pos, stack, heads = config
+
+        # if we pop stack[-1], it won't be able to find its gold-standard dependant.
+        for buffer_pos in range(pos, len(heads)):
+            if stack[-1] == gold_heads[buffer_pos]:
+                return False
+
+        # making a RA transition will pop stack[-1], it won't be able to find its gold-standard head.
+        for buffer_pos in range(pos, len(heads)):
+            if buffer_pos == gold_heads[stack[-1]]:
+                return False
+        return True
 
 
 class FixedWindowParser(ArcStandardParser):
