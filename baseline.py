@@ -590,6 +590,76 @@ def train_parser(
     return parser
 
 
+def dynamic_oracle(
+    config: tuple[int, list[int], list[int]], gold_heads: list[int]
+) -> list[int]:
+    raise NotImplementedError
+
+
+def train_parser_dynamic_oracle(
+    train_data: Treebank,
+    n_epochs: int = 1,
+    batch_size: int = 100,  # noqa: ARG001
+    lr: float = 1e-2,
+) -> FixedWindowParserHybrid:
+    # Create the vocabularies
+    vocab_words, vocab_tags = make_vocabs(train_data)
+
+    # Instantiate the parser
+    parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
+
+    # Instantiate the optimizer
+    optimizer = optim.Adam(parser.model.parameters(), lr=lr)
+
+    # Training loop
+    for _ in range(n_epochs):
+        running_loss = 0
+        n_examples = 0
+        with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
+            for sentence in train_data:
+                # Separate the words, tags, and heads
+                words, tags, heads = zip(*sentence)
+
+                config = parser.initial_config(len(heads))
+
+                # Encode words and tags using the vocabularies
+                words = [vocab_words.get(w, UNK_IDX) for w in words]
+                tags = [vocab_tags[t] for t in tags]
+
+                while not parser.is_final_config(config):
+                    valid_moves = parser.valid_moves(config)
+                    features = parser.featurize(words, tags, config)
+                    scores = parser.model.forward(features)
+
+                    best_score, predicted_move = float("-inf"), -1
+                    for move in valid_moves:
+                        if scores[move] > best_score:
+                            best_score, predicted_move = scores[move], move
+
+                    zero_cost_moves = dynamic_oracle(config, heads)
+                    best_zero_cost_move = (
+                        max(zero_cost_moves, key=lambda x: scores[x]) or -1
+                    )
+
+                    y = torch.LongTensor([best_zero_cost_move])
+
+                    loss = F.cross_entropy(scores, y)
+
+                    if predicted_move in zero_cost_moves:
+                        config = parser.next_config(config, predicted_move)
+                    else:
+                        config = parser.next_config(config, best_zero_cost_move)
+
+                    loss.backward()
+                    optimizer.step()
+                    running_loss += loss.item()
+                    n_examples += 1
+                    pbar.set_postfix(loss=running_loss / n_examples)
+                pbar.update(1)
+
+    return parser
+
+
 def get_uas(
     parser: FixedWindowParser | FixedWindowParserHybrid, gold_sentences: Treebank
 ) -> float:
