@@ -513,58 +513,26 @@ def training_examples_parser(
     vocab_words: dict[str, int],
     vocab_tags: dict[str, int],
     gold_data: Treebank,
-    parser: FixedWindowParser,
+    parser: FixedWindowParser | FixedWindowParserHybrid,
     batch_size: int = 100,
 ) -> Iterable[tuple[torch.Tensor, torch.LongTensor]]:
     bx = []
     by = []
 
+    is_hybrid = isinstance(parser, FixedWindowParserHybrid)
+
     for sentence in gold_data:
         # Separate the words, gold tags, and gold heads
         words, tags, gold_heads = zip(*sentence)
+
+        oracle_moves_fn = oracle_moves_hybrid if is_hybrid else oracle_moves
 
         # Encode words and tags using the vocabularies
         words = [vocab_words.get(w, UNK_IDX) for w in words]
         tags = [vocab_tags[t] for t in tags]
 
         # Call the oracle
-        for config, gold_move in oracle_moves(gold_heads):
-            bx.append(parser.featurize(words, tags, config))
-            by.append(gold_move)
-            if len(bx) >= batch_size:
-                bx = torch.stack(bx)
-                by = torch.LongTensor(by)
-                yield bx, by
-                bx = []
-                by = []
-
-    # Check whether there is an incomplete batch
-    if bx:
-        bx = torch.stack(bx)
-        by = torch.LongTensor(by)
-        yield bx, by
-
-
-def training_examples_parser_hybrid(
-    vocab_words: dict[str, int],
-    vocab_tags: dict[str, int],
-    gold_data: Treebank,
-    parser: FixedWindowParser,
-    batch_size: int = 100,
-) -> Iterable[tuple[torch.Tensor, torch.LongTensor]]:
-    bx = []
-    by = []
-
-    for sentence in gold_data:
-        # Separate the words, gold tags, and gold heads
-        words, tags, gold_heads = zip(*sentence)
-
-        # Encode words and tags using the vocabularies
-        words = [vocab_words.get(w, UNK_IDX) for w in words]
-        tags = [vocab_tags[t] for t in tags]
-
-        # Call the oracle
-        for config, gold_move in oracle_moves_hybrid(gold_heads):
+        for config, gold_move in oracle_moves_fn(gold_heads):
             bx.append(parser.featurize(words, tags, config))
             by.append(gold_move)
             if len(bx) >= batch_size:
@@ -598,12 +566,6 @@ def train_parser(
         else FixedWindowParser(vocab_words, vocab_tags)
     )
 
-    training_examples = (
-        training_examples_parser_hybrid(vocab_words, vocab_tags, train_data, parser)
-        if parser_type == "arc-hybrid"
-        else training_examples_parser(vocab_words, vocab_tags, train_data, parser)
-    )
-
     # Instantiate the optimizer
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
 
@@ -612,7 +574,9 @@ def train_parser(
         running_loss = 0
         n_examples = 0
         with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
-            for bx, by in training_examples:
+            for bx, by in training_examples_parser(
+                vocab_words, vocab_tags, train_data, parser
+            ):
                 optimizer.zero_grad()
                 output = parser.model.forward(bx)
                 loss = F.cross_entropy(output, by)
@@ -697,7 +661,7 @@ if __name__ == "__main__":
 
         tagger = train_tagger(train_data)
         print(f"{accuracy(tagger, dev_data):.4f}")
-        parser = train_parser(train_data, parser_type="arc-standard", n_epochs=1)
+        parser = train_parser(train_data, parser_type="arc-hybrid", n_epochs=1)
         print(f"{get_uas(parser, dev_data):.4f}")
         acc, uas = evaluate(tagger, parser, dev_data)
         print(f"acc: {acc:.4f}, uas: {uas:.4f}")
