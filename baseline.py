@@ -632,6 +632,7 @@ if __name__ == "__main__":
     import sys
 
     AVAILABLE_TREEBANKS = ["en_ewt", "ja_gsd"]
+    AVAILABLE_PARSER_TYPES = ["arc-standard", "arc-hybrid"]
     TREEBANK_ROOT = "treebank"
 
     if len(sys.argv) > 1:
@@ -650,6 +651,7 @@ if __name__ == "__main__":
     print(f"Using treebanks: {treebanks}")
 
     for treebank in treebanks:
+        print(f"Current treebank: {treebank}")
         train_data_filename = f"{TREEBANK_ROOT}/{treebank}/{treebank}-ud-train.conllu"
         dev_data_filename = f"{TREEBANK_ROOT}/{treebank}/{treebank}-ud-dev.conllu"
 
@@ -661,7 +663,10 @@ if __name__ == "__main__":
 
         tagger = train_tagger(train_data)
         print(f"{accuracy(tagger, dev_data):.4f}")
-        parser = train_parser(train_data, parser_type="arc-hybrid", n_epochs=1)
-        print(f"{get_uas(parser, dev_data):.4f}")
-        acc, uas = evaluate(tagger, parser, dev_data)
-        print(f"acc: {acc:.4f}, uas: {uas:.4f}")
+
+        for parser_type in AVAILABLE_PARSER_TYPES:
+            print(f"Current parser type: {parser_type}")
+            parser = train_parser(train_data, parser_type=parser_type, n_epochs=1)
+            print(f"{get_uas(parser, dev_data):.4f}")
+            acc, uas = evaluate(tagger, parser, dev_data)
+            print(f"acc: {acc:.4f}, uas: {uas:.4f}")
