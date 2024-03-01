@@ -1,5 +1,6 @@
 import os
 from collections.abc import Iterable
+from enum import Enum
 from typing import Self, cast
 
 import conllu
@@ -13,6 +14,15 @@ from tqdm import tqdm
 from projectivize import filename_projectivize
 
 torch.manual_seed(0)
+
+
+SH, LA, RA = 0, 1, 2
+
+PAD = "[PAD]"
+UNK = "[UNK]"
+
+PAD_IDX = 0
+UNK_IDX = 1
 
 
 class Treebank(Dataset):
@@ -36,13 +46,6 @@ class Treebank(Dataset):
 
     def __getitem__(self, idx):
         return self.items[idx]
-
-
-PAD = "[PAD]"
-UNK = "[UNK]"
-
-PAD_IDX = 0
-UNK_IDX = 1
 
 
 def make_vocabs(gold_data: Treebank) -> tuple[dict[str, int], dict[str, int]]:
@@ -386,7 +389,8 @@ class ArcHybridParser(Parser):
             if stack[-1] == gold_heads[buffer_pos]:
                 return False
 
-        # making a RA transition will pop stack[-1], it won't be able to find its gold-standard head.
+        # making a RA transition will pop stack[-1], it won't be able to find its
+        # gold-standard head.
         for buffer_pos in range(pos, len(heads)):
             if buffer_pos == gold_heads[stack[-1]]:
                 return False
@@ -651,31 +655,38 @@ def train_parser(
 
 
 def dynamic_oracle(
-    config: tuple[int, list[int], list[int]], gold_heads: list[int]
+    config: tuple[int, list[int], list[int]],
+    valid_moves: list[int],
+    gold_heads: list[int],
 ) -> list[int]:
-    raise NotImplementedError
+    moves: list[int] = []
+    if SH in valid_moves and FixedWindowParserHybrid.zero_cost_sh(config, gold_heads):
+        moves.append(SH)
+    if LA in valid_moves and FixedWindowParserHybrid.zero_cost_la(config, gold_heads):
+        moves.append(LA)
+    if RA in valid_moves and FixedWindowParserHybrid.zero_cost_ra(config, gold_heads):
+        moves.append(RA)
+    return moves
 
 
 def train_parser_dynamic_oracle(
     train_data: Treebank,
     n_epochs: int = 1,
-    batch_size: int = 100,  # noqa: ARG001
+    batch_size: int = 100,
     lr: float = 1e-2,
 ) -> FixedWindowParserHybrid:
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
-
-    # Instantiate the parser
     parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
-
-    # Instantiate the optimizer
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
 
     # Training loop
     for _ in range(n_epochs):
         running_loss = 0
-        n_examples = 0
-        with tqdm(total=sum(2 * len(s) - 1 for s in train_data)) as pbar:
+        n_examples = 1
+        with tqdm(total=len(train_data)) as pbar:
+            batch_iteration = 0
+            batch_loss = []
             for sentence in train_data:
                 # Separate the words, tags, and heads
                 words, tags, heads = zip(*sentence)
@@ -696,25 +707,33 @@ def train_parser_dynamic_oracle(
                         if scores[move] > best_score:
                             best_score, predicted_move = scores[move], move
 
-                    zero_cost_moves = dynamic_oracle(config, heads)
-                    best_zero_cost_move = (
-                        max(zero_cost_moves, key=lambda x: scores[x]) or -1
-                    )
+                    zero_cost_moves = dynamic_oracle(config, valid_moves, heads)
+                    best_zero_cost_move = max(zero_cost_moves, key=lambda x: scores[x])
 
-                    y = torch.LongTensor([best_zero_cost_move])
+                    y = torch.tensor([best_zero_cost_move]).long()
 
-                    loss = F.cross_entropy(scores, y)
+                    loss = F.cross_entropy(scores.unsqueeze(0), y)
+                    batch_loss.append(loss)
+                    running_loss += loss.item()  # tqdm
 
                     if predicted_move in zero_cost_moves:
                         config = parser.next_config(config, predicted_move)
                     else:
                         config = parser.next_config(config, best_zero_cost_move)
 
-                    loss.backward()
-                    optimizer.step()
-                    running_loss += loss.item()
+                    pbar.set_postfix(loss=running_loss / n_examples)  # tqdm
                     n_examples += 1
-                    pbar.set_postfix(loss=running_loss / n_examples)
+                    batch_iteration += 1
+
+                    if batch_iteration == batch_size:
+                        optimizer.zero_grad()
+                        loss = sum(batch_loss)
+                        loss.backward()
+                        optimizer.step()
+                        # re-init
+                        batch_loss = []
+                        batch_iteration = 0
+
                 pbar.update(1)
 
     return parser
@@ -795,8 +814,17 @@ if __name__ == "__main__":
         print(f"{accuracy(tagger, dev_data):.4f}")
 
         for parser_type in AVAILABLE_PARSER_TYPES:
-            print(f"Current parser type: {parser_type}")
-            parser = train_parser(train_data, parser_type=parser_type, n_epochs=1)
-            print(f"{get_uas(parser, dev_data):.4f}")
-            acc, uas = evaluate(tagger, parser, dev_data)
-            print(f"acc: {acc:.4f}, uas: {uas:.4f}")
+            for use_dynamic_oracle in [False, True]:
+                print(f"Current parser type: {parser_type}")
+                print(f"Using dynamic oracle: {use_dynamic_oracle}")
+                if use_dynamic_oracle and parser_type == "arc-standard":
+                    continue
+                elif use_dynamic_oracle and parser_type == "arc-hybrid":
+                    parser = train_parser_dynamic_oracle(train_data, n_epochs=1)
+                else:
+                    parser = train_parser(
+                        train_data, parser_type=parser_type, n_epochs=1
+                    )
+                print(f"{get_uas(parser, dev_data):.4f}")
+                acc, uas = evaluate(tagger, parser, dev_data)
+                print(f"acc: {acc:.4f}, uas: {uas:.4f}")
