@@ -9,7 +9,7 @@ We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 | Tagger   | Parsing system | Oracle  | Language | Accuracy | Unlabelled attachment score | Tags   |
 | -------- | -------------- | ------- | -------- | -------- | --------------------------- | ------ |
 | Standard | Arc-standard   | Static  | EN_EWT   | NA       | 0.7089                      | Golden |
-| Standard | Arc-hybrid     | Static  | EN_EWT   | NA       | 0.6699                      | Golden |
+| Standard | Arc-hybrid     | Static  | EN_EWT   | NA       | 0.6808                      | Golden |
 | Standard | Arc-hybrid     | Dynamic | EN_EWT   | NA       | 0.6682                      | Golden |
 | Standard | Arc-hybrid     | Static  | EN_EWT   | 0.8846   | 0.6604                      | Tagger |
 | Standard | Arc-hybrid     | Static  | EN_EWT   | 0.8846   | 0.6219                      | Tagger |
