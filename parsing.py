@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from models import FixedWindowModel
 from treebank import Treebank
-from utils import LA, PAD_IDX, RA, SH, UNK_IDX, make_vocabs
+from utils import PAD_IDX, UNK_IDX, make_vocabs
 
 
 class Parser:
@@ -73,6 +73,10 @@ class ArcStandardParser(Parser):
 #   - rest from arc-standard
 # --------------------------
 class ArcHybridParser(Parser):
+    MOVES = tuple(range(3))
+
+    SH, LA, RA = MOVES
+
     @staticmethod
     def initial_config(num_words: int) -> tuple[int, list, list[int]]:
         return 0, [], [0] * num_words
@@ -82,11 +86,11 @@ class ArcHybridParser(Parser):
         pos, stack, heads = config
         moves: list[int] = []
         if pos < len(heads):
-            moves.append(SH)
+            moves.append(ArcHybridParser.SH)
         if len(stack) >= 1 and pos < len(heads):
-            moves.append(LA)
+            moves.append(ArcHybridParser.LA)
         if len(stack) >= 2:
-            moves.append(RA)
+            moves.append(ArcHybridParser.RA)
         return moves
 
     @staticmethod
@@ -94,13 +98,13 @@ class ArcHybridParser(Parser):
         config: tuple[int, list[int], list[int]], move: int
     ) -> tuple[int, list[int], list[int]]:
         pos, stack, heads = config
-        if move == SH:
+        if move == ArcHybridParser.SH:
             stack.append(pos)
             pos += 1
-        elif move == LA:
+        elif move == ArcHybridParser.LA:
             s1 = stack.pop()
             heads[s1] = pos  # Arc from front of buffer to top of stack
-        elif move == RA:  # arc-standard
+        elif move == ArcHybridParser.RA:  # arc-standard
             s1 = stack.pop()
             s2 = stack[-1]
             heads[s1] = s2
@@ -186,7 +190,9 @@ class FixedWindowParserBase:
             (3, len(vocab_words), word_dim),
             (3, len(vocab_tags), tag_dim),
         ]
-        self.model = FixedWindowModel(embedding_specs, hidden_dim, len((SH, LA, RA)))
+        self.model = FixedWindowModel(
+            embedding_specs, hidden_dim, len(ArcStandardParser.MOVES)
+        )
         self.w2i = vocab_words
         self.t2i = vocab_tags
 
@@ -283,7 +289,7 @@ def oracle_moves_hybrid(
         if len(stack) >= 1:
             s1 = stack[-1]
             if gold_heads[s1] == pos and remaining_count[s1] == 0:
-                move = LA
+                move = ArcHybridParser.LA
                 yield config, move
                 config = ArcHybridParser.next_config(config, move)
                 remaining_count[pos] -= 1
@@ -292,12 +298,12 @@ def oracle_moves_hybrid(
             s1 = stack[-1]
             s2 = stack[-2]
             if gold_heads[s1] == s2 and remaining_count[s1] == 0:
-                move = RA
+                move = ArcHybridParser.RA
                 yield config, move
                 config = ArcHybridParser.next_config(config, move)
                 remaining_count[s2] -= 1
                 continue
-        move = SH
+        move = ArcHybridParser.SH
         yield config, move
         config = ArcHybridParser.next_config(config, move)
 
@@ -389,12 +395,18 @@ def dynamic_oracle(
     gold_heads: list[int],
 ) -> list[int]:
     moves: list[int] = []
-    if SH in valid_moves and FixedWindowParserHybrid.zero_cost_sh(config, gold_heads):
-        moves.append(SH)
-    if LA in valid_moves and FixedWindowParserHybrid.zero_cost_la(config, gold_heads):
-        moves.append(LA)
-    if RA in valid_moves and FixedWindowParserHybrid.zero_cost_ra(config, gold_heads):
-        moves.append(RA)
+    if ArcHybridParser.SH in valid_moves and FixedWindowParserHybrid.zero_cost_sh(
+        config, gold_heads
+    ):
+        moves.append(ArcHybridParser.SH)
+    if ArcHybridParser.LA in valid_moves and FixedWindowParserHybrid.zero_cost_la(
+        config, gold_heads
+    ):
+        moves.append(ArcHybridParser.LA)
+    if ArcHybridParser.RA in valid_moves and FixedWindowParserHybrid.zero_cost_ra(
+        config, gold_heads
+    ):
+        moves.append(ArcHybridParser.RA)
     return moves
 
 
