@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from projectivize import filename_projectivize
 
-torch.manual_seed(0)
+torch.manual_seed(12345)
 
 
 SH, LA, RA = 0, 1, 2
@@ -291,10 +291,6 @@ class ArcStandardParser(Parser):
 #   - rest from arc-standard
 # --------------------------
 class ArcHybridParser(Parser):
-    MOVES = tuple(range(3))
-
-    SH, LA, RA = MOVES
-
     @staticmethod
     def initial_config(num_words: int) -> tuple[int, list, list[int]]:
         return 0, [], [0] * num_words
@@ -304,11 +300,11 @@ class ArcHybridParser(Parser):
         pos, stack, heads = config
         moves: list[int] = []
         if pos < len(heads):
-            moves.append(ArcHybridParser.SH)
+            moves.append(SH)
         if len(stack) >= 1 and pos < len(heads):
-            moves.append(ArcHybridParser.LA)
+            moves.append(LA)
         if len(stack) >= 2:
-            moves.append(ArcHybridParser.RA)
+            moves.append(RA)
         return moves
 
     @staticmethod
@@ -316,15 +312,13 @@ class ArcHybridParser(Parser):
         config: tuple[int, list[int], list[int]], move: int
     ) -> tuple[int, list[int], list[int]]:
         pos, stack, heads = config
-        stack = list(stack)  # copy because we will modify it
-        heads = list(heads)  # copy because we will modify it
-        if move == ArcHybridParser.SH:
+        if move == SH:
             stack.append(pos)
             pos += 1
-        elif move == ArcHybridParser.LA:
+        elif move == LA:
             s1 = stack.pop()
             heads[s1] = pos  # Arc from front of buffer to top of stack
-        elif move == ArcHybridParser.RA:  # arc-standard
+        elif move == RA:  # arc-standard
             s1 = stack.pop()
             s2 = stack[-1]
             heads[s1] = s2
@@ -333,7 +327,7 @@ class ArcHybridParser(Parser):
     @staticmethod
     def is_final_config(config: tuple[int, list, list[int]]) -> bool:
         pos, stack, heads = config
-        return pos == len(heads) and len(stack) == 1
+        return pos == len(heads) and len(stack) == 1 and stack[0] == 0
 
     # True if it can be done at zero cost
     @staticmethod
@@ -465,9 +459,7 @@ class FixedWindowParserHybrid(ArcHybridParser):
             (3, len(vocab_words), word_dim),
             (3, len(vocab_tags), tag_dim),
         ]
-        self.model = FixedWindowModel(
-            embedding_specs, hidden_dim, len(ArcHybridParser.MOVES)
-        )
+        self.model = FixedWindowModel(embedding_specs, hidden_dim, len((SH, LA, RA)))
         self.w2i = vocab_words
         self.t2i = vocab_tags
 
@@ -554,7 +546,7 @@ def oracle_moves_hybrid(
         if len(stack) >= 1:
             s1 = stack[-1]
             if gold_heads[s1] == pos and remaining_count[s1] == 0:
-                move = ArcHybridParser.LA
+                move = LA
                 yield config, move
                 config = ArcHybridParser.next_config(config, move)
                 remaining_count[pos] -= 1
@@ -563,12 +555,12 @@ def oracle_moves_hybrid(
             s1 = stack[-1]
             s2 = stack[-2]
             if gold_heads[s1] == s2 and remaining_count[s1] == 0:
-                move = ArcHybridParser.RA
+                move = RA
                 yield config, move
                 config = ArcHybridParser.next_config(config, move)
                 remaining_count[s2] -= 1
                 continue
-        move = ArcHybridParser.SH
+        move = SH
         yield config, move
         config = ArcHybridParser.next_config(config, move)
 
@@ -721,7 +713,9 @@ def train_parser_dynamic_oracle(
                     else:
                         config = parser.next_config(config, best_zero_cost_move)
 
-                    pbar.set_postfix(loss=running_loss / n_examples)  # tqdm
+                    pbar.set_postfix(
+                        loss=running_loss / n_examples, run=n_examples
+                    )  # tqdm
                     n_examples += 1
                     batch_iteration += 1
 
@@ -811,7 +805,7 @@ if __name__ == "__main__":
         os.remove("tmp")
 
         tagger = train_tagger(train_data)
-        print(f"{accuracy(tagger, dev_data):.4f}")
+        print(f"Tagging accuracy: {accuracy(tagger, dev_data):.4f}")
 
         for parser_type in AVAILABLE_PARSER_TYPES:
             for use_dynamic_oracle in [False, True]:
@@ -825,6 +819,6 @@ if __name__ == "__main__":
                     parser = train_parser(
                         train_data, parser_type=parser_type, n_epochs=1
                     )
-                print(f"{get_uas(parser, dev_data):.4f}")
+                print(f"Gold uas: {get_uas(parser, dev_data):.4f}")
                 acc, uas = evaluate(tagger, parser, dev_data)
-                print(f"acc: {acc:.4f}, uas: {uas:.4f}")
+                print(f"Tagging accuracy: {acc:.4f}, Retagged uas: {uas:.4f}")
