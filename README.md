@@ -6,22 +6,16 @@ We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 
 ### English treebank:
 
-| Tagger   | Parsing system | Oracle  | Language | Accuracy | Unlabelled attachment score | Tags   |
-| -------- | -------------- | ------- | -------- | -------- | --------------------------- | ------ |
-| Standard | Arc-standard   | Static  | EN_EWT   | NA       | 0.7089                      | Golden |
-| Standard | Arc-hybrid     | Static  | EN_EWT   | NA       | 0.6808                      | Golden |
-| Standard | Arc-hybrid     | Dynamic | EN_EWT   | NA       | 0.6682                      | Golden |
-| Standard | Arc-hybrid     | Static  | EN_EWT   | 0.8846   | 0.6604                      | Tagger |
-| Standard | Arc-hybrid     | Static  | EN_EWT   | 0.8846   | 0.6219                      | Tagger |
-| Standard | Arc-hybrid     | Dynamic | EN_EWT   | 0.8846   | 0.6239                      | Tagger |
+| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
+| -------------- | ------- | ---------------- | --------------------------- |
+| arc-standard   | static  | (Golden tags)    | 0.7089                      |
+| arc-standard   | static  | 0.8846           | 0.6604                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.6699                      |
+| arc-hybrid     | static  | 0.8846           | 0.6219                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.6682                      |
+| arc-hybrid     | dynamic | 0.8846           | 0.6239                      |
 
 ### Japanese treebank:
-
-| Tagger   | Parsing system | Oracle  | Language | Accuracy | Unlabelled attachment score | Tags   |
-| -------- | -------------- | ------- | -------- | -------- | --------------------------- | ------ |
-| Standard | Arc-standard   | Static  | JA_GSD   | 0.9548   | 0.8426                      | Golden |
-| Standard | Arc-hybrid     | Static  | JA_GSD   | 0.9548   | 0.7628                      | Golden |
-| Standard | Arc-hybrid     | Dynamic | JA_GSD   | 0.9548   | 0.7154                      | Golden |
 
 ## Structure
 

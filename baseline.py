@@ -72,12 +72,9 @@ if __name__ == "__main__":
 
         print("Training tagger")
         tagger = train_tagger(train_data)
-        print(f"Tagging accuracy: {accuracy(tagger, dev_data):.4f}")
 
         for parser_type in AVAILABLE_PARSER_TYPES:
             for use_dynamic_oracle in [False, True]:
-                print(f"Current parser type: {parser_type}")
-                print(f"Using dynamic oracle: {use_dynamic_oracle}")
                 if use_dynamic_oracle and parser_type == "arc-standard":
                     continue
                 elif use_dynamic_oracle and parser_type == "arc-hybrid":
@@ -86,6 +83,11 @@ if __name__ == "__main__":
                     parser = train_parser(
                         train_data, parser_type=parser_type, n_epochs=1
                     )
-                print(f"Gold uas: {get_uas(parser, dev_data):.4f}")
-                acc, uas = evaluate(tagger, parser, dev_data)
-                print(f"Tagging accuracy: {acc:.4f}, Retagged uas: {uas:.4f}")
+                golden_uas = get_uas(parser, dev_data)
+                tagger_acc, retag_uas = evaluate(tagger, parser, dev_data)
+                oracle = "dynamic" if use_dynamic_oracle else "static"
+                print("Parsing system\tOracle\tTagging acc.\t UAS")
+                print(f"{parser_type}\t {oracle}\t (Golden) \t {golden_uas:.4f}")
+                print(
+                    f"{parser_type}\t {oracle}\t {tagger_acc:.4f}\t\t {retag_uas:.4f}"
+                )
