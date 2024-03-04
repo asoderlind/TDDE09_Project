@@ -2,15 +2,34 @@
 
 ## Data:
 
-We set the seed `torch.manual_seed(0)` for reproducibiilty.
+We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 
-| Tagger   | Parsing system | Oracle  | Language | Accuracy | Unlabelled attachment score |
-| -------- | -------------- | ------- | -------- | -------- | --------------------------- |
-| Standard | Arc-standard   | Static  | EN_EWT   | 0.8827   | 0.6619                      |
-| Standard | Arc-hybrid     | Static  | EN_EWT   | 0.8827   | 0.6244                      |
-| Standard | Arc-standard   | Static  | JA_GSD   | 0.9548   | 0.8426                      |
-| Standard | Arc-hybrid     | Static  | JA_GSD   | 0.9548   | 0.7628                      |
-| Standard | Arc-hybrid     | Dynamic | JA_GSD   | 0.9548   | 0.7154                      |
+### English treebank:
+
+| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
+| -------------- | ------- | ---------------- | --------------------------- |
+| arc-standard   | static  | (Golden tags)    | 0.7089                      |
+| arc-standard   | static  | 0.8846           | 0.6604                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.6699                      |
+| arc-hybrid     | static  | 0.8846           | 0.6219                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.6682                      |
+| arc-hybrid     | dynamic | 0.8846           | 0.6239                      |
+
+### Japanese treebank:
+
+## Structure
+
+`baseline.py` - the main entrypoint
+
+`parsing.py` - includes the parsing classes and `get_uas` evaluation function
+
+`tagging.py` - includes the tagging classes and `accuracy` evaluation function
+
+`models.py` - includes the base network `FixedWindowModel` that is trained
+
+`utils.py` - includes any constants and helper functions such as `make_vocabs`
+
+`treebank.py` - includes the `Treebank` class
 
 ## Usage
 
