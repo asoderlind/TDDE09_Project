@@ -187,8 +187,8 @@ class FixedWindowParserBase:
         hidden_dim: int = 180,
     ):
         embedding_specs: list[tuple[int, int, int]] = [
-            (3, len(vocab_words), word_dim),
-            (3, len(vocab_tags), tag_dim),
+            (6, len(vocab_words), word_dim),
+            (6, len(vocab_tags), tag_dim),
         ]
         self.model = FixedWindowModel(
             embedding_specs, hidden_dim, len(ArcStandardParser.MOVES)
@@ -200,23 +200,21 @@ class FixedWindowParserBase:
         self, words: list[int], tags: list[int], config: tuple[int, list, list[int]]
     ) -> torch.Tensor:
         i, stack, heads = config
-        x = torch.zeros(14, dtype=torch.long)
-        # word at current pos
+        x = torch.zeros(12, dtype=torch.long)
         x[0] = words[i] if i < len(words) else PAD_IDX
-        # first stack
         x[1] = words[stack[-1]] if len(stack) >= 1 else PAD_IDX
-        # second stack
         x[2] = words[stack[-2]] if len(stack) >= 2 else PAD_IDX
-        x[3] = tags[i] if i < len(tags) else PAD_IDX
-        x[4] = tags[stack[-1]] if len(stack) >= 1 else PAD_IDX
-        x[5] = tags[stack[-2]] if len(stack) >= 2 else PAD_IDX
-        # our expanded tags:
-        # the following does slightly improve both tagging accuracy and UAS
-        x[6] = words[i + 1] if i + 1 < len(words) else PAD_IDX
-        x[7] = tags[i + 1] if i + 1 < len(tags) else PAD_IDX
-        x[8] = words[i + 2] if i + 2 < len(words) else PAD_IDX
-        x[9] = tags[i + 2] if i + 2 < len(tags) else PAD_IDX
-        x[10] = words[stack[-3]] if len(stack) >= 3 else PAD_IDX
+        # our expanded word-features:
+        x[3] = words[i + 1] if i + 1 < len(words) else PAD_IDX
+        x[4] = words[i + 2] if i + 2 < len(words) else PAD_IDX
+        x[5] = words[stack[-3]] if len(stack) >= 3 else PAD_IDX
+
+        x[6] = tags[i] if i < len(tags) else PAD_IDX
+        x[7] = tags[stack[-1]] if len(stack) >= 1 else PAD_IDX
+        x[8] = tags[stack[-2]] if len(stack) >= 2 else PAD_IDX
+        # our expanded tag-features:
+        x[9] = tags[i + 1] if i + 1 < len(tags) else PAD_IDX
+        x[10] = tags[i + 2] if i + 2 < len(tags) else PAD_IDX
         x[11] = tags[stack[-3]] if len(stack) >= 3 else PAD_IDX
 
         # adding features like this one won't make a difference since it will be embedded

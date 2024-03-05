@@ -16,7 +16,7 @@ We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
 | arc-standard   | static  | (Golden tags)    | 0.7089                      |
-| arc-standard   | static  | 0.8846           | 0.6604                      |
+| arc-standard   | static  | 0.8846           | 0.6604                      | 
 | arc-hybrid     | static  | (Golden tags)    | 0.6699                      |
 | arc-hybrid     | static  | 0.8846           | 0.6219                      |
 | arc-hybrid     | dynamic | (Golden tags)    | 0.6682                      |
@@ -26,12 +26,12 @@ With increased features:
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.7097                      |
-| arc-standard   | static  | 0.8870           | 0.6660                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.6735                      |
-| arc-hybrid     | static  | 0.8870           | 0.6246                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.6665                      |
-| arc-hybrid     | dynamic | 0.8870           | 0.6188                      |
+| arc-standard   | static  | (Golden tags)    |                       | 
+| arc-standard   | static  |            |                       | 
+| arc-hybrid     | static  | (Golden tags)    |                       | 
+| arc-hybrid     | static  |            |                       | 
+| arc-hybrid     | dynamic | (Golden tags)    |                       |
+| arc-hybrid     | dynamic |            |                       |
 
 Note that the non dynamic oracle runs take 3m and the dynamic oracle ones take 35m on CPU, GPU haven't been tested
 Conclusion: The increased features choosen led to a worse result.
@@ -42,12 +42,12 @@ With increased features:
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.8501                      |
-| arc-standard   | static  | 0.9500           | 0.8314                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.7738                      |
-| arc-hybrid     | static  | 0.9500           | 0.7587                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.7115                      |
-| arc-hybrid     | dynamic | 0.9500           | 0.6947                      |
+| arc-standard   | static  | (Golden tags)    |                       |
+| arc-standard   | static  |            |                       |
+| arc-hybrid     | static  | (Golden tags)    |                       |
+| arc-hybrid     | static  |            |                       |
+| arc-hybrid     | dynamic | (Golden tags)    |                       |
+| arc-hybrid     | dynamic |            |                       |
 
 ## Structure
 
