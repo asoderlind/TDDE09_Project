@@ -78,12 +78,14 @@ if __name__ == "__main__":
         print("Training tagger")
         tagger = train_tagger(train_data)
 
-        for parser_type in ["arc-hybrid"]:
-            for use_dynamic_oracle in [True]:
+        for parser_type in AVAILABLE_PARSER_TYPES:
+            for use_dynamic_oracle in [False, True]:
                 if use_dynamic_oracle and parser_type == "arc-standard":
                     continue
                 elif use_dynamic_oracle and parser_type == "arc-hybrid":
-                    parser = train_parser_dynamic_oracle(train_data, n_epochs=1)
+                    parser = train_parser_dynamic_oracle(
+                        train_data, n_epochs=1, batch_size=100
+                    )
                 else:
                     parser = train_parser(
                         train_data, parser_type=parser_type, n_epochs=1
