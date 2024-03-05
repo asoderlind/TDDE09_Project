@@ -33,6 +33,7 @@ class FixedWindowTagger(Tagger):
         self.w2i = vocab_words
         self.i2t = {i: t for t, i in vocab_tags.items()}
 
+    # we might want to try changing this
     def featurize(self, words: list[int], i: int, pred_tags: list[int]) -> torch.Tensor:
         x = torch.zeros(4, dtype=torch.long)
         x[0] = words[i]

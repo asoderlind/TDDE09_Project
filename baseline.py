@@ -12,6 +12,11 @@ from parsing import (
 from tagging import FixedWindowTagger, accuracy, train_tagger
 from treebank import Treebank
 
+# complete .to(device) to all relevant functions
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
+print(torch.__version__)
+
 torch.manual_seed(12345)
 
 
