@@ -15,26 +15,14 @@ We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.7089                      |
-| arc-standard   | static  | 0.8846           | 0.6604                      | 
-| arc-hybrid     | static  | (Golden tags)    | 0.6699                      |
-| arc-hybrid     | static  | 0.8846           | 0.6219                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.6682                      |
-| arc-hybrid     | dynamic | 0.8846           | 0.6239                      |
+| arc-standard   | static  | (Golden tags)    | 0.7379                      |
+| arc-standard   | static  | 0.8870           | 0.6904                      | 
+| arc-hybrid     | static  | (Golden tags)    | 0.7519                      |
+| arc-hybrid     | static  | 0.8870           | 0.7001                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.7290                      |
+| arc-hybrid     | dynamic | 0.8870           | 0.6804                      |
 
-With increased features:
-
-| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
-| -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    |                       | 
-| arc-standard   | static  |            |                       | 
-| arc-hybrid     | static  | (Golden tags)    |                       | 
-| arc-hybrid     | static  |            |                       | 
-| arc-hybrid     | dynamic | (Golden tags)    |                       |
-| arc-hybrid     | dynamic |            |                       |
-
-Note that the non dynamic oracle runs take 3m and the dynamic oracle ones take 35m on CPU, GPU haven't been tested
-Conclusion: The increased features choosen led to a worse result.
+Note that the non dynamic oracle runs take 3m and the dynamic oracle ones take 58m on CPU, GPU haven't been tested
 
 ### Japanese treebank:
 
@@ -42,12 +30,12 @@ With increased features:
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    |                       |
-| arc-standard   | static  |            |                       |
-| arc-hybrid     | static  | (Golden tags)    |                       |
-| arc-hybrid     | static  |            |                       |
-| arc-hybrid     | dynamic | (Golden tags)    |                       |
-| arc-hybrid     | dynamic |            |                       |
+| arc-standard   | static  | (Golden tags)    | 0.8601                      |
+| arc-standard   | static  | 0.9521           | 0.8480                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.8686                      |
+| arc-hybrid     | static  | 0.9521           | 0.8551                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.8112                      |
+| arc-hybrid     | dynamic | 0.9521           | 0.7986                      |
 
 ## Structure
 

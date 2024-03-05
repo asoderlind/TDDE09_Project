@@ -1,3 +1,4 @@
+import random
 from collections.abc import Iterable
 from typing import cast
 
@@ -408,7 +409,7 @@ def train_parser(
     return parser
 
 
-def dynamic_oracle(
+def zero_cost_moves(
     config: tuple[int, list[int], list[int]],
     valid_moves: list[int],
     gold_heads: list[int],
@@ -462,24 +463,24 @@ def train_parser_dynamic_oracle(
                     features = parser.featurize(words, tags, config)
                     scores = parser.model.forward(features)
 
-                    best_score, predicted_move = float("-inf"), -1
-                    for move in valid_moves:
-                        if scores[move] > best_score:
-                            best_score, predicted_move = scores[move], move
+                    # pick the move with the highest score that can be done
+                    t_p = max(valid_moves, key=lambda x: scores[x])
 
-                    zero_cost_moves = dynamic_oracle(config, valid_moves, heads)
-                    best_zero_cost_move = max(zero_cost_moves, key=lambda x: scores[x])
+                    # pick the move with the highest score that can be done at zero cost
+                    zero_cost = zero_cost_moves(config, valid_moves, heads)
+                    t_o = max(zero_cost, key=lambda x: scores[x])
 
-                    y = torch.tensor([best_zero_cost_move]).long()
+                    y = torch.zeros(3)
+                    y[t_o] = 1.0
 
-                    loss = F.cross_entropy(scores.unsqueeze(0), y)
+                    loss = F.cross_entropy(scores, y)
                     batch_loss.append(loss)
                     running_loss += loss.item()  # tqdm
 
-                    if predicted_move in zero_cost_moves:
-                        config = parser.next_config(config, predicted_move)
+                    if t_p in zero_cost:
+                        config = parser.next_config(config, t_p)
                     else:
-                        config = parser.next_config(config, best_zero_cost_move)
+                        config = parser.next_config(config, random.choice(zero_cost))
 
                     pbar.set_postfix(
                         loss=running_loss / n_examples, run=n_examples

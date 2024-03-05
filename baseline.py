@@ -83,7 +83,9 @@ if __name__ == "__main__":
                 if use_dynamic_oracle and parser_type == "arc-standard":
                     continue
                 elif use_dynamic_oracle and parser_type == "arc-hybrid":
-                    parser = train_parser_dynamic_oracle(train_data, n_epochs=1)
+                    parser = train_parser_dynamic_oracle(
+                        train_data, n_epochs=1, batch_size=100
+                    )
                 else:
                     parser = train_parser(
                         train_data, parser_type=parser_type, n_epochs=1
