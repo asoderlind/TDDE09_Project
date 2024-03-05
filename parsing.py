@@ -430,19 +430,6 @@ def zero_cost_moves(
     return moves
 
 
-k = 100  # change this
-p = 0.5  # change this
-
-
-def choose_next(i: int, t: int, zero_cost: list[int]) -> int:
-    if i > k and random.random() > p:
-        return t
-    elif t in zero_cost:
-        return t
-    else:
-        return random.choice(zero_cost)
-
-
 def train_parser_dynamic_oracle(
     train_data: Treebank,
     n_epochs: int = 1,
@@ -483,15 +470,17 @@ def train_parser_dynamic_oracle(
                     zero_cost = zero_cost_moves(config, valid_moves, heads)
                     t_o = max(zero_cost, key=lambda x: scores[x])
 
-                    x = scores.unsqueeze(0)
-                    y = torch.tensor([t_o]).long()
+                    y = torch.zeros(3)
+                    y[t_o] = 1.0
 
-                    loss = F.cross_entropy(x, y)
+                    loss = F.cross_entropy(scores, y)
                     batch_loss.append(loss)
                     running_loss += loss.item()  # tqdm
 
-                    t_n = choose_next(batch_iteration, t_p, zero_cost)
-                    config = parser.next_config(config, t_n)
+                    if t_p in zero_cost:
+                        config = parser.next_config(config, t_p)
+                    else:
+                        config = parser.next_config(config, random.choice(zero_cost))
 
                     pbar.set_postfix(
                         loss=running_loss / n_examples, run=n_examples
