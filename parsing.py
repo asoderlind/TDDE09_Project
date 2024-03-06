@@ -447,7 +447,8 @@ def train_parser_dynamic_oracle(
         n_examples = 1
         with tqdm(total=len(train_data)) as pbar:
             batch_iteration = 0
-            batch_loss = []
+            batch_scores = []
+            batch_y = []
             for sentence in train_data:
                 # Separate the words, tags, and heads
                 words, tags, heads = zip(*sentence)
@@ -473,28 +474,36 @@ def train_parser_dynamic_oracle(
                     y = torch.zeros(3)
                     y[t_o] = 1.0
 
-                    loss = F.cross_entropy(scores, y)
-                    batch_loss.append(loss)
-                    running_loss += loss.item()  # tqdm
+                    # loss = F.cross_entropy(scores, y)
+                    # print(scores.tolist())
+                    batch_scores.append(scores.tolist())
+                    batch_y.append(y.tolist())
+                    # running_loss += loss.item()  # tqdm
 
                     if t_p in zero_cost:
                         config = parser.next_config(config, t_p)
                     else:
                         config = parser.next_config(config, random.choice(zero_cost))
-
+                    """
                     pbar.set_postfix(
                         loss=running_loss / n_examples, run=n_examples
                     )  # tqdm
+                    """
                     n_examples += 1
                     batch_iteration += 1
 
                     if batch_iteration == batch_size:
+                        print(batch_scores)
+                        tot_scores = torch.FloatTensor(batch_scores)
+                        tot_y = torch.FloatTensor(batch_y)
+                        loss = F.cross_entropy(tot_scores, tot_y)
                         optimizer.zero_grad()
-                        loss = sum(batch_loss)
+                        # loss = sum(batch_loss)
                         loss.backward()
                         optimizer.step()
                         # re-init
-                        batch_loss = []
+                        batch_scores = []
+                        batch_y = []
                         batch_iteration = 0
 
                 pbar.update(1)
