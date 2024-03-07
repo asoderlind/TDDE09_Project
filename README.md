@@ -15,27 +15,34 @@ We set the seed `torch.manual_seed(12345)` for reproducibiilty.
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.7379                      |
-| arc-standard   | static  | 0.8870           | 0.6904                      | 
-| arc-hybrid     | static  | (Golden tags)    | 0.7519                      |
-| arc-hybrid     | static  | 0.8870           | 0.7001                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.7290                      |
-| arc-hybrid     | dynamic | 0.8870           | 0.6804                      |
-
-Note that the non dynamic oracle runs take 3m and the dynamic oracle ones take 58m on CPU, GPU haven't been tested
+| arc-standard   | static  | (Golden tags)    | 0.7419                      |
+| arc-standard   | static  | 0.8846           | 0.6945                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.7535                      |
+| arc-hybrid     | static  | 0.8846           | 0.7032                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.7301                      |
+| arc-hybrid     | dynamic | 0.8846           | 0.6815                      |
 
 ### Japanese treebank:
 
-With increased features:
+| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
+| -------------- | ------- | ---------------- | --------------------------- |
+| arc-standard   | static  | (Golden tags)    | 0.8496                      |
+| arc-standard   | static  | 0.9511           | 0.8389                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.8710                      |
+| arc-hybrid     | static  | 0.9511           | 0.8538                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.7797                      |
+| arc-hybrid     | dynamic | 0.9511           | 0.7672                      |
+
+### Swedish treebank:
 
 | Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
 | -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.8601                      |
-| arc-standard   | static  | 0.9521           | 0.8480                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.8686                      |
-| arc-hybrid     | static  | 0.9521           | 0.8551                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.8112                      |
-| arc-hybrid     | dynamic | 0.9521           | 0.7986                      |
+| arc-standard   | static  | (Golden tags)    | 0.7145                      |
+| arc-standard   | static  | 0.9035           | 0.6436                      |
+| arc-hybrid     | static  | (Golden tags)    | 0.6774                      |
+| arc-hybrid     | static  | 0.9035           | 0.6179                      |
+| arc-hybrid     | dynamic | (Golden tags)    | 0.6883                      |
+| arc-hybrid     | dynamic | 0.9035           | 0.6179                      |
 
 ## Structure
 
