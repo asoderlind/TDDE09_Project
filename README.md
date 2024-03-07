@@ -74,4 +74,4 @@ python3 baseline.py {treebank}
 
 ### Currently the avaiable treebanks are
 
-en_ewt, ja_gsd
+en_ewt, ja_gsd, sv_talbanken
