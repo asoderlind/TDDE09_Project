@@ -7,6 +7,8 @@ from parsing import (
     FixedWindowParser,
     FixedWindowParserHybrid,
     get_uas,
+    k,
+    p,
     train_parser,
     train_parser_dynamic_oracle,
 )
@@ -86,6 +88,7 @@ if __name__ == "__main__":
                 if use_dynamic_oracle and parser_type == "arc-standard":
                     continue
                 elif use_dynamic_oracle and parser_type == "arc-hybrid":
+                    print(f"p = {p}, k = {k}")
                     parser = train_parser_dynamic_oracle(
                         train_data, n_epochs=1, batch_size=100
                     )
