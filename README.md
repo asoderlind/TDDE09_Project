@@ -12,13 +12,14 @@ Philip Welin-Berger (phiwe030)
 
 ## Abstract:
 
-In this project we extended the baseline, which included an arc-standard parser with a static oracle,
-with an arc-hybrid parser and a dynamic oracle. The dynamic oracle may only be used with the arc-hybrid parser,
-however, since it requires a parsing system that is arc-decomposable. According to the litterature, the arc-hybrid
-parser with a static oracle should perform equally well as the arc-standard. It was also found that the dynamic oracle
-should perform better than the static oracle, both using arc-hybrid parsing.[^1] 
-To improve the dynamic oracle further we choose to implement exploration parametres for the dynamic oracle according to "A Dynamic Oracle for Arc-Eager Dependency Parsin" 
-by Goldberg & Nivre. Our result indicates... [^2]
+In our project, we expanded the baseline with an arc-hybrid parser and dynamic oracle, augmenting the existing arc-standard parser and static oracle setup.
+
+"Training Deterministic Parsers with Non-Deterministic Oracles" by Goldberg & Nivre indicates that the arc-hybrid parser should outperform the arc-standard parser, a result we confirmed with a 1% improvement in attachment score.[^1] However, performance varied across treebanks, with the Swedish treebank exhibiting lower scores.
+
+While Goldberg & Nivre anticipated the dynamic oracle's superiority over the static oracle in arc-hybrid parsing, our project didn't align with this expectation.[^1] 
+Despite efforts, our dynamic oracle consistently lagged behind the static one. We therefore decided on enhancing the dynamic oracle by implementing exploration parameters the same way "A Dynamic Oracle for Arc-Eager Dependency Parsing" by Goldberg & Nivre described.[^2] This yielded a 1% attachment score improvement. However, it still couldn't surpass the static oracle. This underscores the challenge of optimizing dynamic oracles. 
+
+In conclusion our findings suggests that the arc-hybrid parser in combination with a static oracle produces the best attachment score out of the different methods we tried. 
 
 [^1]: [Training Deterministic Parsers with Non-Deterministic Oracles](https://aclanthology.org/Q13-1033) (Goldberg & Nivre, TACL 2013)
 
@@ -26,9 +27,9 @@ by Goldberg & Nivre. Our result indicates... [^2]
 
 ## Data:
 
-We used batch_size = 15 with k = 2 and p = 0.9 as our exploration parametres for the dynamic oracle.
-The result shows the avarage values over 5 different seeds. The seeds used were 1, 2, 3, 4 and 5 and 
-the same seed were both used for random.seed(SEED) and torch.manual_seed(SEED) for reproducibility.
+We used batch_size = 15 with k = 2 and p = 0.9 as our exploration parameters for the dynamic oracle. We choose these specific parameters as we found that they produced the best results.
+The result shows the average values over 5 different seeds. The seeds used were 1, 2, 3, 4 and 5 and 
+the same seed was both used for random.seed(SEED) and torch.manual_seed(SEED) for reproducibility.
 
 ### English treebank:
 
@@ -43,25 +44,25 @@ the same seed were both used for random.seed(SEED) and torch.manual_seed(SEED) f
 
 ### Japanese treebank:
 
-| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
-| -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.8496                      |
-| arc-standard   | static  | 0.9511           | 0.8389                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.8710                      |
-| arc-hybrid     | static  | 0.9511           | 0.8538                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.7797                      |
-| arc-hybrid     | dynamic | 0.9511           | 0.7672                      |
+| Parsing system | Oracle  | Avarage Tagging Accuracy | Avarage Unlabelled attachment score |
+| -------------- | ------- | ------------------------ | ----------------------------------- |
+| arc-standard   | static  | (Golden tags)            | 85.67%                              |
+| arc-standard   | static  | 94.992%                  | 83.99%                              |
+| arc-hybrid     | static  | (Golden tags)            | 86.75%                              |
+| arc-hybrid     | static  | 94.992%                  | 85.06%                              |
+| arc-hybrid     | dynamic | (Golden tags)            | 79.07%                              |
+| arc-hybrid     | dynamic | 94.992%                  | 77.50%                              |
 
 ### Swedish treebank:
 
-| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
-| -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.7145                      |
-| arc-standard   | static  | 0.9035           | 0.6436                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.6774                      |
-| arc-hybrid     | static  | 0.9035           | 0.6179                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.6883                      |
-| arc-hybrid     | dynamic | 0.9035           | 0.6179                      |
+| Parsing system | Oracle  | Avarage Tagging Accuracy | Avarage Unlabelled attachment score |
+| -------------- | ------- | ------------------------ | ----------------------------------- |
+| arc-standard   | static  | (Golden tags)            | 71.00%                              |
+| arc-standard   | static  | 90.276%                  | 63.53%                              |
+| arc-hybrid     | static  | (Golden tags)            | 69.73%                              |
+| arc-hybrid     | static  | 90.276%                  | 62.42%                              |
+| arc-hybrid     | dynamic | (Golden tags)            | 68.82%                              |
+| arc-hybrid     | dynamic | 90.276%                  | 61.69%                              |
 
 ## Structure
 
