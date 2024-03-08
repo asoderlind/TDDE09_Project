@@ -45,7 +45,7 @@ def evaluate(
 if __name__ == "__main__":
     import sys
 
-    AVAILABLE_TREEBANKS = ["en_ewt", "ja_gsd"]
+    AVAILABLE_TREEBANKS = ["en_ewt", "ja_gsd", "sv_talbanken"]
     AVAILABLE_PARSER_TYPES = ["arc-standard", "arc-hybrid"]
     TREEBANK_ROOT = "treebank"
 
