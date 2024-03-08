@@ -3,8 +3,11 @@
 ## Members:
 
 Axel Söderlind ()
+
 Erik Nordell ()
+
 Linus Lundblad (linlu706)
+
 Philip Welin-Berger ()
 
 ## Abstract:
@@ -13,7 +16,11 @@ In this project we extended the baseline, which included an arc-standard parser 
 with an arc-hybrid parser and a dynamic oracle. The dynamic oracle may only be used with the arc-hybrid parser,
 however, since it requires a parsing system that is arc-decomposable. According to the litterature, the arc-hybrid
 parser with a static oracle should perform equally well as the arc-standard. It was also found that the dynamic oracle
-should perform better than the static oracle, both using arc-hybrid parsing.
+should perform better than the static oracle, both using arc-hybrid parsing.[^1] [^2]
+
+[^1] [Training Deterministic Parsers with Non-Deterministic Oracles](https://aclanthology.org/Q13-1033) (Goldberg & Nivre, TACL 2013)
+
+[^2] [A Dynamic Oracle for Arc-Eager Dependency Parsing](https://aclanthology.org/C12-1059) (Goldberg & Nivre, COLING 2012)
 
 ## Data:
 
