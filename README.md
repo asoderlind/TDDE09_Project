@@ -1,9 +1,9 @@
-# TDDE09_Project
+# Exploring performance of multilingual tagger-parser implementations
 
 ## Members:
 
 Axel Söderlind ()
-Erik Nordell ()
+Erik Nordell (erino445)
 Linus Lundblad (linlu706)
 Philip Welin-Berger ()
 
@@ -13,7 +13,9 @@ In this project we extended the baseline, which included an arc-standard parser 
 with an arc-hybrid parser and a dynamic oracle. The dynamic oracle may only be used with the arc-hybrid parser,
 however, since it requires a parsing system that is arc-decomposable. According to the litterature, the arc-hybrid
 parser with a static oracle should perform equally well as the arc-standard. It was also found that the dynamic oracle
-should perform better than the static oracle, both using arc-hybrid parsing.
+should perform better than the static oracle, both using arc-hybrid parsing. We then ran these on treebanks for English, 
+Japanese and Swedish, and our showed improvements of the unlabelled attatchment score in (both dynamic oracles and) arc-hybrid 
+parser, with specific scores shown in the tables below.
 
 ## Data:
 
