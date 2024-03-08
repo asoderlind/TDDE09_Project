@@ -18,9 +18,9 @@ however, since it requires a parsing system that is arc-decomposable. According 
 parser with a static oracle should perform equally well as the arc-standard. It was also found that the dynamic oracle
 should perform better than the static oracle, both using arc-hybrid parsing.[^1] [^2]
 
-[^1] [Training Deterministic Parsers with Non-Deterministic Oracles](https://aclanthology.org/Q13-1033) (Goldberg & Nivre, TACL 2013)
+[^1]: [Training Deterministic Parsers with Non-Deterministic Oracles](https://aclanthology.org/Q13-1033) (Goldberg & Nivre, TACL 2013)
 
-[^2] [A Dynamic Oracle for Arc-Eager Dependency Parsing](https://aclanthology.org/C12-1059) (Goldberg & Nivre, COLING 2012)
+[^2]: [A Dynamic Oracle for Arc-Eager Dependency Parsing](https://aclanthology.org/C12-1059) (Goldberg & Nivre, COLING 2012)
 
 ## Data:
 
