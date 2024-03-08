@@ -11,6 +11,9 @@ from models import FixedWindowModel
 from treebank import Treebank
 from utils import PAD_IDX, UNK_IDX, make_vocabs
 
+k = 2
+p = 0.1
+
 
 class Parser:
     def predict(self, words, tags):
@@ -441,13 +444,11 @@ def train_parser_dynamic_oracle(
     parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
 
-    k = 2
-    p = 0.9
-
     # Training loop
     for _ in range(n_epochs):
         running_loss = 0
         n_examples = 1
+        number_of_breaks = 0
         with tqdm(total=len(train_data)) as pbar:
             batch_iteration = 0
             bx = torch.zeros(batch_size, 12)
@@ -468,6 +469,7 @@ def train_parser_dynamic_oracle(
                     scores = parser.model.forward(features)
 
                     if not valid_moves:
+                        number_of_breaks += 1
                         break
 
                     # pick the move with the highest score that can be done
@@ -501,7 +503,9 @@ def train_parser_dynamic_oracle(
                         # tqdm
                         running_loss += loss.item()
                         n_examples += 1
-                        pbar.set_postfix(loss=running_loss / n_examples)
+                        pbar.set_postfix(
+                            loss=running_loss / n_examples, breaks=number_of_breaks
+                        )
                         # re-init batch
                         bx = torch.zeros(batch_size, 12)
                         by = torch.zeros(batch_size, 3)
