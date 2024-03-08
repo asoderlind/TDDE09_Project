@@ -2,13 +2,13 @@
 
 ## Members:
 
-Axel Söderlind ()
+Axel Söderlind (axeso712)
 
-Erik Nordell ()
+Erik Nordell (erino445)
 
 Linus Lundblad (linlu706)
 
-Philip Welin-Berger ()
+Philip Welin-Berger (phiwe030)
 
 ## Abstract:
 
@@ -16,7 +16,9 @@ In this project we extended the baseline, which included an arc-standard parser 
 with an arc-hybrid parser and a dynamic oracle. The dynamic oracle may only be used with the arc-hybrid parser,
 however, since it requires a parsing system that is arc-decomposable. According to the litterature, the arc-hybrid
 parser with a static oracle should perform equally well as the arc-standard. It was also found that the dynamic oracle
-should perform better than the static oracle, both using arc-hybrid parsing.[^1] [^2]
+should perform better than the static oracle, both using arc-hybrid parsing.[^1] 
+To improve the dynamic oracle further we choose to implement exploration parametres for the dynamic oracle according to "A Dynamic Oracle for Arc-Eager Dependency Parsin" 
+by Goldberg & Nivre. Our result indicates... [^2]
 
 [^1]: [Training Deterministic Parsers with Non-Deterministic Oracles](https://aclanthology.org/Q13-1033) (Goldberg & Nivre, TACL 2013)
 
@@ -24,18 +26,20 @@ should perform better than the static oracle, both using arc-hybrid parsing.[^1]
 
 ## Data:
 
-We set the seed `torch.manual_seed(12345)` for reproducibiilty.
+We used batch_size = 15 with k = 2 and p = 0.9 as our exploration parametres for the dynamic oracle.
+The result shows the avarage values over 5 different seeds. The seeds used were 1, 2, 3, 4 and 5 and 
+the same seed were both used for random.seed(SEED) and torch.manual_seed(SEED) for reproducibility.
 
 ### English treebank:
 
-| Parsing system | Oracle  | Tagging Accuracy | Unlabelled attachment score |
-| -------------- | ------- | ---------------- | --------------------------- |
-| arc-standard   | static  | (Golden tags)    | 0.7419                      |
-| arc-standard   | static  | 0.8846           | 0.6945                      |
-| arc-hybrid     | static  | (Golden tags)    | 0.7535                      |
-| arc-hybrid     | static  | 0.8846           | 0.7032                      |
-| arc-hybrid     | dynamic | (Golden tags)    | 0.7301                      |
-| arc-hybrid     | dynamic | 0.8846           | 0.6815                      |
+| Parsing system | Oracle  | Avarage Tagging Accuracy | Avarage Unlabelled attachment score |
+| -------------- | ------- | ------------------------ | ----------------------------------- |
+| arc-standard   | static  | (Golden tags)            | 73.58%                              |
+| arc-standard   | static  | 88.084%                  | 68.71%                              |
+| arc-hybrid     | static  | (Golden tags)            | 74.54%                              |
+| arc-hybrid     | static  | 88.084%                  | 69.50%                              |
+| arc-hybrid     | dynamic | (Golden tags)            | 73.60%                              |
+| arc-hybrid     | dynamic | 88.084%                  | 68.70%                              |
 
 ### Japanese treebank:
 
