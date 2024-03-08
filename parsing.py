@@ -433,13 +433,16 @@ def zero_cost_moves(
 def train_parser_dynamic_oracle(
     train_data: Treebank,
     n_epochs: int = 1,
-    batch_size: int = 100,
+    batch_size: int = 15,
     lr: float = 1e-2,
 ) -> FixedWindowParserHybrid:
     # Create the vocabularies
     vocab_words, vocab_tags = make_vocabs(train_data)
     parser = FixedWindowParserHybrid(vocab_words, vocab_tags)
     optimizer = optim.Adam(parser.model.parameters(), lr=lr)
+
+    k = 2
+    p = 0.9
 
     # Training loop
     for _ in range(n_epochs):
@@ -464,6 +467,9 @@ def train_parser_dynamic_oracle(
                     features = parser.featurize(words, tags, config)
                     scores = parser.model.forward(features)
 
+                    if not valid_moves:
+                        break
+
                     # pick the move with the highest score that can be done
                     t_p = max(valid_moves, key=lambda x: scores[x])
 
@@ -477,7 +483,9 @@ def train_parser_dynamic_oracle(
                     bx[batch_iteration] = features
                     by[batch_iteration] = y
 
-                    if t_p in zero_cost:
+                    if (
+                        batch_iteration > k and random.random() > p
+                    ) or t_p in zero_cost:
                         config = parser.next_config(config, t_p)
                     else:
                         config = parser.next_config(config, random.choice(zero_cost))
